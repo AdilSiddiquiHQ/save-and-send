@@ -1,5 +1,3 @@
-# Save & Send 1.0.0
-
 **Save any video. Send it in one tap.**
 
 The first public release of Save & Send: a private, on-device Android app that
