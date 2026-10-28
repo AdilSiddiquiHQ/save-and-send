@@ -26,7 +26,7 @@ python3 tool/check_l10n.py           # every key exists, is generated, and is us
 
 `check_l10n.py` is the CI gate. It fails when a language is missing a key, when
 the generated Dart was not refreshed after an ARB edit, and when a key was added
-but no screen ever reads it. There are 187 keys in each of the five files.
+but no screen ever reads it. There are 190 keys in each of the five files.
 
 Generated Dart is committed so `flutter analyze` works in a fresh clone.
 
@@ -125,7 +125,8 @@ Platform names keep their local spelling: `Instagram` in Hindi/Bengali,
 Wi-Fi only, the engine channel, and the link check). 1.3.0 added 23 more for
 the For Status tools, the trim dialog, and the parts list. 1.3.1 added 12 for
 the no-op reasons, the re-encode note, and the Storage section, and removed one
-dead key (`qualityBest`). They follow the same voice as the existing text, but
+dead key (`qualityBest`). 1.3.2 added 3 for the Status cancel dialog. There are
+190 keys in each file. They follow the same voice as the existing text, but
 they are new: the first read-through by a native speaker is still the most
 useful thing anyone can contribute.
 

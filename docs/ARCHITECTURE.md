@@ -34,7 +34,7 @@ flowchart TB
         end
 
         subgraph Runtime["Bundled runtime"]
-            YTDLP["yt-dlp 2026.10.21<br/>Python zipapp"]
+            YTDLP["yt-dlp 2026.10.26<br/>Python zipapp"]
             Python["CPython"]
             FFmpeg["FFmpeg"]
         end
@@ -288,9 +288,10 @@ WhatsApp does not handle it, the app falls back to the WhatsApp contact picker.
 `ensureEngineReady()` runs once, off the main thread:
 
 1. Initialize the FFmpeg and YoutubeDL Android wrappers.
-2. Force the bundled modern yt-dlp binary from `res/raw/ytdlp` when the stored
-   version is missing, old, or matches a known stale size, then mark it
-   `2026.10.21`.
+2. Copy the bundled yt-dlp binary from `res/raw/ytdlp` when the stored version
+   differs from `EngineInfo.YTDLP_VERSION` or the file size does not match the
+   asset. The asset itself is the source of truth, and `EngineInfoTest` fails
+   the build when the version string and the zipapp disagree.
 3. Repair native library dependencies with `NativeLibraryHelper`.
 
 `NativeLibraryHelper` copies `libc++_shared.so` into the extracted Python and

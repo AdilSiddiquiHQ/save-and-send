@@ -594,4 +594,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get tempEmpty => 'لا يوجد ما يُمسح.';
+
+  @override
+  String get cancelTransformTitle => 'إيقاف إجراء الحالة؟';
+
+  @override
+  String get cancelTransformBody => 'لن تُحفظ النسخة الجديدة.';
+
+  @override
+  String get keepEncoding => 'أكمل الإجراء';
 }

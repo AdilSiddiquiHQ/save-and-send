@@ -186,5 +186,8 @@
   "clearTemp": "মুছুন",
   "clearTempTitle": "অস্থায়ী ফাইলগুলো মুছবেন?",
   "tempCleared": "{size} খালি হয়েছে।",
-  "tempEmpty": "মুছতে কিছু নেই।"
+  "tempEmpty": "মুছতে কিছু নেই।",
+  "cancelTransformTitle": "স্ট্যাটাসের কাজটা থামাবেন?",
+  "cancelTransformBody": "নতুন কপিটা সেভ হবে না।",
+  "keepEncoding": "কাজ চালু রাখুন"
 }

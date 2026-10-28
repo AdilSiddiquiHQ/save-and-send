@@ -261,6 +261,63 @@ void main() {
     expect(find.text('A long clip · 2'), findsWidgets);
   });
 
+  testWidgets('cancelling a Status action does not talk about downloads',
+      (tester) async {
+    _setPhone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      'https://www.instagram.com/reel/ABC123/',
+    );
+    await tester.ensureVisible(find.text('Download video'));
+    await tester.tap(find.text('Download video'));
+    await tester.pump();
+    await tester.pump();
+
+    await _emit({
+      'type': 'done',
+      'requestId': _lastRequestId,
+      'path': '/tmp/save_and_send_test_missing.mp4',
+      'title': 'A long clip',
+      'durationMs': 65000,
+      'width': 1080,
+      'height': 1920,
+      'hasAudio': true,
+      'trimmed': false,
+      'sizeBytes': 12 * 1024 * 1024,
+    });
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Split into parts'));
+    await tester.tap(find.text('Split into parts'));
+    await tester.pump();
+    await tester.pump();
+
+    await _emit({
+      'type': 'stage',
+      'requestId': _lastTransformArgs?['requestId'],
+      'stage': 'transforming',
+    });
+    await tester.pump();
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stop this Status action?'), findsOneWidget);
+    expect(find.text('The new copy will not be saved.'), findsOneWidget);
+    expect(find.text('Keep going'), findsOneWidget);
+    expect(find.text('Stop this download?'), findsNothing);
+    expect(find.text('Keep downloading'), findsNothing);
+
+    await tester.tap(find.text('Keep going'));
+    await tester.pumpAndSettle();
+    expect(find.text('Stop this Status action?'), findsNothing);
+    expect(find.text('Preparing for Status…'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('trim and target size dialogs pass their values', (tester) async {
     _setPhone(tester);
     await tester.pumpWidget(const SaveAndSendApp());

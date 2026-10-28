@@ -676,16 +676,20 @@ class MainActivity : FlutterActivity() {
                 val bundledBytes = input.readBytes()
                 val ytdlPrefs = applicationContext.getSharedPreferences("youtubedl-android", MODE_PRIVATE)
                 val currentVer = ytdlPrefs.getString("dlpVersionName", null)
-                val isOutdated = currentVer.isNullOrBlank() ||
-                    currentVer.startsWith("2025") ||
-                    currentVer == "Bundled" ||
-                    ytdlpTarget.length() == 3170726L ||
-                    !ytdlpTarget.exists()
+                // The asset is the source of truth. Comparing its size catches
+                // a new APK even when the version string was not updated, and
+                // comparing the version catches an in-app update that should
+                // stay in place.
+                val isOutdated = !ytdlpTarget.exists() ||
+                    ytdlpTarget.length() != bundledBytes.size.toLong() ||
+                    currentVer != EngineInfo.YTDLP_VERSION
                 if (isOutdated) {
                     ytdlpDir.mkdirs()
                     ytdlpTarget.writeBytes(bundledBytes)
                     ytdlpTarget.setExecutable(true)
-                    ytdlPrefs.edit().putString("dlpVersionName", "2026.10.21").apply()
+                    ytdlPrefs.edit()
+                        .putString("dlpVersionName", EngineInfo.YTDLP_VERSION)
+                        .apply()
                 }
             }
         }

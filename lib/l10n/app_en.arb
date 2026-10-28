@@ -267,5 +267,17 @@
       }
     }
   },
-  "tempEmpty": "Nothing to clear."
+  "tempEmpty": "Nothing to clear.",
+  "cancelTransformTitle": "Stop this Status action?",
+  "@cancelTransformTitle": {
+    "description": "Confirmation title while a Status action is encoding."
+  },
+  "cancelTransformBody": "The new copy will not be saved.",
+  "@cancelTransformBody": {
+    "description": "Explains that the new Status copy will be lost."
+  },
+  "keepEncoding": "Keep going",
+  "@keepEncoding": {
+    "description": "Button that dismisses the dialog and lets the encode continue."
+  }
 }

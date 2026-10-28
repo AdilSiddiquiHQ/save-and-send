@@ -186,5 +186,8 @@
   "clearTemp": "हटाएँ",
   "clearTempTitle": "अस्थायी फ़ाइलें हटाएँ?",
   "tempCleared": "{size} खाली हो गया।",
-  "tempEmpty": "हटाने के लिए कुछ नहीं।"
+  "tempEmpty": "हटाने के लिए कुछ नहीं।",
+  "cancelTransformTitle": "Status का काम रोक दें?",
+  "cancelTransformBody": "नई कॉपी सेव नहीं होगी।",
+  "keepEncoding": "काम चालू रखें"
 }

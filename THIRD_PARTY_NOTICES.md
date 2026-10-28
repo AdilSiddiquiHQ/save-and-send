@@ -10,12 +10,12 @@ they do not replace the full license texts shipped by each project.
 | Component | Version | License | Source |
 | --- | --- | --- | --- |
 | [youtubedl-android](https://github.com/JunkFood02/youtubedl-android) (`library`, `ffmpeg`, `common`) | 0.18.1 | GPL-3.0 | https://github.com/JunkFood02/youtubedl-android |
-| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | 2026.10.21 | Unlicense | https://github.com/yt-dlp/yt-dlp |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | 2026.10.26 | Unlicense | https://github.com/yt-dlp/yt-dlp |
 | [FFmpeg](https://ffmpeg.org/) (build distributed by youtubedl-android) | bundled with youtubedl-android 0.18.1 | GPL-3.0 | https://github.com/JunkFood02/youtubedl-android |
 | [CPython](https://www.python.org/) (runtime distributed by youtubedl-android) | bundled with youtubedl-android 0.18.1 | PSF-2.0 | https://www.python.org/ |
 | [libc++](https://libcxx.llvm.org/) (`libc++_shared.so`) | Android NDK build | Apache-2.0 with LLVM exception | https://libcxx.llvm.org/ |
 
-The bundled yt-dlp executable is the official 2026.10.21 release
+The bundled yt-dlp executable is the official 2026.10.26 release
 (`8cdf4fea48ecf4064387375301d7f294ebdb17c1`), stored at
 `android/app/src/main/res/raw/ytdlp` and extracted on first launch. It is
 unmodified apart from being stored as an Android raw resource.

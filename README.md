@@ -13,7 +13,7 @@ or TikTok link into a WhatsApp-ready MP4.</p>
   <img alt="Android 7.0+" src="https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white" />
   <img alt="Flutter 3.44" src="https://img.shields.io/badge/Flutter-3.44-02569B?style=flat-square&logo=flutter&logoColor=white" />
   <img alt="arm64-v8a" src="https://img.shields.io/badge/ABI-arm64--v8a-0F6E47?style=flat-square" />
-  <img alt="yt-dlp 2026.10.21" src="https://img.shields.io/badge/yt--dlp-2026.10.21-FF0000?style=flat-square&logo=youtube&logoColor=white" />
+  <img alt="yt-dlp 2026.10.26" src="https://img.shields.io/badge/yt--dlp-2026.10.26-FF0000?style=flat-square&logo=youtube&logoColor=white" />
   <img alt="Personal use" src="https://img.shields.io/badge/License-Personal_use-0F6E47?style=flat-square" />
   <a href="https://github.com/AdilSiddiquiHQ/save-and-send/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/AdilSiddiquiHQ/save-and-send/actions/workflows/ci.yml/badge.svg" /></a>
 </p>
@@ -55,7 +55,7 @@ download engine runs entirely on the phone.
 | | |
 | --- | --- |
 | **Package** | `com.personal.save_and_send` |
-| **Version** | 1.3.1 (7) |
+| **Version** | 1.3.2 (8) |
 | **Devices** | Android 7.0+ (API 24), `arm64-v8a` |
 | **Output** | MP4 / H.264 / AAC-LC, ≤ 1920 px long edge, ≤ 59.5 s · MP3 192 kbps |
 | **Interface** | English, Urdu, Hindi, Arabic, Bengali · Material 3 · RTL-aware |
@@ -228,7 +228,7 @@ streams are not supported and are reported as errors.
 ## Install
 
 1. Open the [latest release](https://github.com/AdilSiddiquiHQ/save-and-send/releases/latest)
-   and download `SaveAndSend-v1.3.1-arm64.apk`.
+   and download `SaveAndSend-v1.3.2-arm64.apk`.
 2. Optionally verify the SHA-256 checksum published with the release.
 3. Allow your browser or file manager to install unknown apps, then open the
    APK.
@@ -299,7 +299,7 @@ Copy it to a predictable name before sharing:
 
 ```bash
 cp build/app/outputs/flutter-apk/app-release.apk \
-   SaveAndSend-v1.3.1-arm64.apk
+   SaveAndSend-v1.3.2-arm64.apk
 ```
 
 The repository deliberately keeps only `arm64-v8a`. The Python and FFmpeg
@@ -474,7 +474,7 @@ issue](https://github.com/AdilSiddiquiHQ/save-and-send/issues/new?template=broke
 | Visual system | Manrope, Plus Jakarta Sans, Noto Sans Arabic, Lucide icons |
 | Native shell | Kotlin 2.3.20, Android Gradle Plugin 9.0.1, Gradle 9.1.0 |
 | Download engine | [youtubedl-android](https://github.com/JunkFood02/youtubedl-android) 0.18.1 |
-| Extractor | [yt-dlp](https://github.com/yt-dlp/yt-dlp) 2026.10.21 |
+| Extractor | [yt-dlp](https://github.com/yt-dlp/yt-dlp) 2026.10.26 |
 | Media processing | FFmpeg (bundled with youtubedl-android) |
 | Preview | `video_player` |
 | Storage | MediaStore / direct Movies directory |

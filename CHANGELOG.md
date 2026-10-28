@@ -6,6 +6,22 @@ All notable changes to Save & Send are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.2] — 2026-10-28
+
+### Added
+
+- `EngineInfoTest` fails the build when the bundled yt-dlp zipapp, the version
+  constant in the app, and `tool/ytdlp-version.txt` disagree.
+
+### Changed
+
+- Bundled yt-dlp updated to **2026.10.26**, picking up the latest extractor
+  fixes. The engine refresh now compares the asset itself, so a future APK
+  cannot keep an older copy just because a version string was missed.
+- The cancel dialog during a Status action says what is actually lost:
+  "Stop this Status action?", "The new copy will not be saved.", and
+  "Keep going". It no longer talks about stopping a download.
+
 ## [1.3.1] — 2026-10-28
 
 ### Added

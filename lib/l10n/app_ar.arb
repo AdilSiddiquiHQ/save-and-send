@@ -186,5 +186,8 @@
   "clearTemp": "امسح",
   "clearTempTitle": "مسح الملفات المؤقتة؟",
   "tempCleared": "تم تحرير {size}.",
-  "tempEmpty": "لا يوجد ما يُمسح."
+  "tempEmpty": "لا يوجد ما يُمسح.",
+  "cancelTransformTitle": "إيقاف إجراء الحالة؟",
+  "cancelTransformBody": "لن تُحفظ النسخة الجديدة.",
+  "keepEncoding": "أكمل الإجراء"
 }

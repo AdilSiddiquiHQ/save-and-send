@@ -186,5 +186,8 @@
   "clearTemp": "خالی کریں",
   "clearTempTitle": "عارضی فائلیں خالی کریں؟",
   "tempCleared": "{size} جگہ خالی ہو گئی۔",
-  "tempEmpty": "خالی کرنے کے لیے کچھ نہیں۔"
+  "tempEmpty": "خالی کرنے کے لیے کچھ نہیں۔",
+  "cancelTransformTitle": "یہ اسٹیٹس کام روکیں؟",
+  "cancelTransformBody": "نئی کاپی محفوظ نہیں ہوگی۔",
+  "keepEncoding": "جاری رکھیں"
 }

@@ -1226,6 +1226,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing to clear.'**
   String get tempEmpty;
+
+  /// Confirmation title while a Status action is encoding.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop this Status action?'**
+  String get cancelTransformTitle;
+
+  /// Explains that the new Status copy will be lost.
+  ///
+  /// In en, this message translates to:
+  /// **'The new copy will not be saved.'**
+  String get cancelTransformBody;
+
+  /// Button that dismisses the dialog and lets the encode continue.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep going'**
+  String get keepEncoding;
 }
 
 class _AppLocalizationsDelegate

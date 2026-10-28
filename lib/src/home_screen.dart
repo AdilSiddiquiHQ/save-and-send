@@ -763,16 +763,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _cancelDownload() async {
+    final transforming = _phase == Phase.transforming;
     final yes = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text(s.cancelTitle),
-          content: Text(s.cancelBody),
+          title: Text(transforming ? s.cancelTransformTitle : s.cancelTitle),
+          content: Text(transforming ? s.cancelTransformBody : s.cancelBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(s.keepDownloading),
+              child: Text(transforming ? s.keepEncoding : s.keepDownloading),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -797,16 +798,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _confirmExit() async {
     if (!_busy) return;
+    final transforming = _phase == Phase.transforming;
     final yes = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text(s.cancelTitle),
-          content: Text(s.cancelBody),
+          title: Text(transforming ? s.cancelTransformTitle : s.cancelTitle),
+          content: Text(transforming ? s.cancelTransformBody : s.cancelBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(s.keepDownloading),
+              child: Text(transforming ? s.keepEncoding : s.keepDownloading),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),

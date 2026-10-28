@@ -594,4 +594,13 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get tempEmpty => 'हटाने के लिए कुछ नहीं।';
+
+  @override
+  String get cancelTransformTitle => 'Status का काम रोक दें?';
+
+  @override
+  String get cancelTransformBody => 'नई कॉपी सेव नहीं होगी।';
+
+  @override
+  String get keepEncoding => 'काम चालू रखें';
 }

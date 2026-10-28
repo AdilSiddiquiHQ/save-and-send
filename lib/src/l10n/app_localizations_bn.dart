@@ -596,4 +596,13 @@ class AppLocalizationsBn extends AppLocalizations {
 
   @override
   String get tempEmpty => 'মুছতে কিছু নেই।';
+
+  @override
+  String get cancelTransformTitle => 'স্ট্যাটাসের কাজটা থামাবেন?';
+
+  @override
+  String get cancelTransformBody => 'নতুন কপিটা সেভ হবে না।';
+
+  @override
+  String get keepEncoding => 'কাজ চালু রাখুন';
 }

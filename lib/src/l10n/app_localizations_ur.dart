@@ -595,4 +595,13 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get tempEmpty => 'خالی کرنے کے لیے کچھ نہیں۔';
+
+  @override
+  String get cancelTransformTitle => 'یہ اسٹیٹس کام روکیں؟';
+
+  @override
+  String get cancelTransformBody => 'نئی کاپی محفوظ نہیں ہوگی۔';
+
+  @override
+  String get keepEncoding => 'جاری رکھیں';
 }

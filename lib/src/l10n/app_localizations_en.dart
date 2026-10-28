@@ -596,4 +596,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tempEmpty => 'Nothing to clear.';
+
+  @override
+  String get cancelTransformTitle => 'Stop this Status action?';
+
+  @override
+  String get cancelTransformBody => 'The new copy will not be saved.';
+
+  @override
+  String get keepEncoding => 'Keep going';
 }
