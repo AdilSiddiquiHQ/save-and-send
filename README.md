@@ -23,6 +23,8 @@ or TikTok link into a WhatsApp-ready MP4.</p>
   &nbsp;·&nbsp;
   <a href="docs/ARCHITECTURE.md">Architecture</a>
   &nbsp;·&nbsp;
+  <a href="docs/ROADMAP.md">Roadmap</a>
+  &nbsp;·&nbsp;
   <a href="CHANGELOG.md">Changelog</a>
 </p>
 
@@ -374,6 +376,7 @@ save-and-send/
 ├── assets/fonts/                      # OFL fonts + license texts
 ├── docs/
 │   ├── ARCHITECTURE.md
+│   ├── ROADMAP.md
 │   └── screenshots/
 ├── lib/
 │   ├── main.dart

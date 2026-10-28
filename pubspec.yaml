@@ -2,7 +2,7 @@ name: save_and_send
 description: "Share a video link, download it, and send it on WhatsApp."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.12.2

@@ -274,6 +274,14 @@ class Downloader(
                 workDir,
                 youtubeClient = "android_vr,web_safari,tv",
             )
+            // YouTube rotates its player responses constantly. Another client
+            // set costs nothing when the first two fail and often recovers a
+            // blocked video without touching cookies.
+            attempts += "youtube-embedded" to buildRequest(
+                url,
+                workDir,
+                youtubeClient = "tv_simply,web_embedded,mweb",
+            )
             attempts += "youtube-fallback" to buildRequest(url, workDir, format = "b")
         } else if (isInstagram(url)) {
             attempts += "instagram-default" to buildRequest(url, workDir)
@@ -498,6 +506,84 @@ class Downloader(
             max(info.displayWidth, info.displayHeight) <= 1920
     }
 
+    private fun ffmpegBinary(): File? {
+        val ffmpeg = File(context.applicationInfo.nativeLibraryDir, "libffmpeg.so")
+        if (!ffmpeg.exists()) return null
+        if (!ffmpeg.canExecute()) {
+            // Native libraries are normally extracted executable, but some
+            // installers do not preserve the mode. Failure here is harmless.
+            ffmpeg.setExecutable(true)
+        }
+        return ffmpeg
+    }
+
+    /**
+     * Runs FFmpeg and collects its output. Returns true on a clean exit.
+     * The process is exposed through [ffmpegProcess] so cancel() can kill it.
+     */
+    private fun runFfmpegCommand(command: List<String>, outputText: StringBuilder): Boolean {
+        NativeLibraryHelper.fixDependencies(context)
+
+        val processBuilder = ProcessBuilder(command)
+        processBuilder.environment().apply {
+            this["LD_LIBRARY_PATH"] = NativeLibraryHelper.getLdLibraryPath(context)
+            this["HOME"] = context.cacheDir.absolutePath
+            this["TMPDIR"] = context.cacheDir.absolutePath
+        }
+        processBuilder.redirectErrorStream(true)
+
+        val process = processBuilder.start()
+        ffmpegProcess = process
+        val reader = Thread {
+            runCatching {
+                process.inputStream.bufferedReader().useLines { lines ->
+                    lines.forEach { outputText.appendLine(it) }
+                }
+            }
+        }
+        reader.start()
+
+        val finished = process.waitFor(10, TimeUnit.MINUTES)
+        if (!finished) {
+            process.destroyForcibly()
+            ffmpegProcess = null
+            throw IOException("FFmpeg timed out.")
+        }
+        reader.join(2_000)
+        ffmpegProcess = null
+        return process.exitValue() == 0
+    }
+
+    /**
+     * Merges a left-over video-only file with its separate audio track. This is
+     * the rescue path for downloads where yt-dlp could not run its own merge
+     * step and the soundtrack was otherwise silently dropped.
+     */
+    private fun muxSeparateStreams(video: File, audio: File, output: File): Boolean {
+        val ffmpeg = ffmpegBinary() ?: return false
+        val command = listOf(
+            ffmpeg.absolutePath,
+            "-y",
+            "-nostdin",
+            "-hide_banner",
+            "-loglevel", "error",
+            "-i", video.absolutePath,
+            "-i", audio.absolutePath,
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-ac", "2",
+            "-movflags", "+faststart",
+            output.absolutePath,
+        )
+        val ok = runCatching { runFfmpegCommand(command, StringBuilder()) }.getOrDefault(false)
+        if (ok && output.length() > 0L && inspect(output).hasAudio) return true
+        runCatching { output.delete() }
+        return false
+    }
+
     private fun runFfmpeg(
         input: File,
         output: File,
@@ -506,15 +592,8 @@ class Downloader(
         trim: Boolean,
         downscale: Boolean,
     ) {
-        val ffmpeg = File(context.applicationInfo.nativeLibraryDir, "libffmpeg.so")
-        if (!ffmpeg.exists()) {
-            throw IOException("FFmpeg is missing from the installation.")
-        }
-        if (!ffmpeg.canExecute()) {
-            // Native libraries are normally extracted executable, but some
-            // installers do not preserve the mode. Failure here is harmless.
-            ffmpeg.setExecutable(true)
-        }
+        val ffmpeg = ffmpegBinary()
+            ?: throw IOException("FFmpeg is missing from the installation.")
 
         val command = mutableListOf(
             ffmpeg.absolutePath,
@@ -554,38 +633,10 @@ class Downloader(
         }
         command += listOf("-movflags", "+faststart", output.absolutePath)
 
-        NativeLibraryHelper.fixDependencies(context)
-
-        val processBuilder = ProcessBuilder(command)
-        processBuilder.environment().apply {
-            this["LD_LIBRARY_PATH"] = NativeLibraryHelper.getLdLibraryPath(context)
-            this["HOME"] = context.cacheDir.absolutePath
-            this["TMPDIR"] = context.cacheDir.absolutePath
-        }
-        processBuilder.redirectErrorStream(true)
-
-        val process = processBuilder.start()
-        ffmpegProcess = process
         val outputText = StringBuilder()
-        val reader = Thread {
-            runCatching {
-                process.inputStream.bufferedReader().useLines { lines ->
-                    lines.forEach { outputText.appendLine(it) }
-                }
-            }
-        }
-        reader.start()
+        val ok = runFfmpegCommand(command, outputText)
 
-        val finished = process.waitFor(10, TimeUnit.MINUTES)
-        if (!finished) {
-            process.destroyForcibly()
-            ffmpegProcess = null
-            throw IOException("FFmpeg timed out.")
-        }
-        reader.join(2_000)
-        ffmpegProcess = null
-
-        if (process.exitValue() != 0 || !output.exists() || output.length() == 0L) {
+        if (!ok || !output.exists() || output.length() == 0L) {
             throw IOException("FFmpeg failed: ${outputText.toString().takeLast(1200)}")
         }
     }
@@ -667,14 +718,25 @@ class Downloader(
         val merged = File(workDir, "video.mp4")
         if (merged.isFile && merged.length() > 0L) return merged
 
-        return workDir.listFiles()
-            ?.filter {
-                it.isFile &&
-                    it.length() > 0L &&
-                    it.extension.lowercase() in VIDEO_EXTENSIONS &&
-                    !it.name.endsWith(".part")
-            }
-            ?.maxByOrNull { it.length() }
+        val files = workDir.listFiles()
+            ?.filter { it.isFile && it.length() > 0L && !it.name.endsWith(".part") }
+            .orEmpty()
+        val video = files
+            .filter { it.extension.lowercase() in VIDEO_EXTENSIONS }
+            .maxByOrNull { it.length() }
+            ?: return null
+
+        // A failed or skipped merge leaves the soundtrack as its own file. Mux
+        // it back instead of quietly handing back a silent video.
+        val audio = files
+            .filter { it.extension.lowercase() in AUDIO_EXTENSIONS }
+            .maxByOrNull { it.length() }
+
+        if (audio != null) {
+            val muxed = File(workDir, "video.mp4")
+            if (muxSeparateStreams(video, audio, muxed)) return muxed
+        }
+        return video
     }
 
     private fun readInfoJson(workDir: File): JSONObject? {
@@ -846,7 +908,13 @@ class Downloader(
 
             text.contains("sign in to confirm") ||
                 text.contains("not a bot") ||
-                (youtube && text.contains("http error 403")) ->
+                (youtube && text.contains("http error 403")) ||
+                (youtube && (
+                    text.contains("nsig") ||
+                        text.contains("signature extraction") ||
+                        text.contains("some formats may be missing") ||
+                        text.contains("unable to extract")
+                    )) ->
                 "youtube_block" to "YouTube is blocking this download right now. Update the downloader in Settings and try again."
 
             text.contains("login required") ||
@@ -918,6 +986,7 @@ class Downloader(
         private val globalBusy = AtomicBoolean(false)
 
         private val VIDEO_EXTENSIONS = setOf("mp4", "m4v", "mov", "webm", "mkv", "avi")
+        private val AUDIO_EXTENSIONS = setOf("m4a", "aac", "opus", "ogg", "mp3", "weba")
         private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp")
 
         /**
