@@ -379,10 +379,11 @@ Open the gear icon on the home screen.
 
 - **Language** — English, اردو, हिन्दी, العربية, or বাংলা. The choice is stored
   locally and applied before the first frame on the next launch.
-- **Downloader updates** — shows the engine version and updates it in place.
-  **Stable** is the safer channel; **Nightly** fixes a broken site sooner. The
-  APK itself does not change, so a site fix does not need a new install. Use
-  this first when a link that worked last week starts failing.
+- **YouTube updates** — the heading is narrow but the downloader serves every
+  supported site. Shows the engine version and updates it in place. **Stable**
+  is the safer channel; **Nightly** fixes a broken site sooner. The APK itself
+  does not change, so a site fix does not need a new install. Use this first
+  when a link that worked last week starts failing.
 - **Storage** — shows how much the download cache, Status copies, and preview
   frames are using, with a one-tap clear. Gallery copies are never touched.
 - **Login cookies** — optional. Paste a Netscape `cookies.txt` file or raw

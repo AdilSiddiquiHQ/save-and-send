@@ -34,7 +34,7 @@ void main() {
             return null;
           case 'ensureEngine':
             return <String, dynamic>{
-              'version': '2025.11.12',
+              'version': '2026.10.26',
               'cookies': false,
             };
           case 'download':
@@ -62,7 +62,7 @@ void main() {
               ],
             };
           case 'engineVersion':
-            return '2025.11.12';
+            return '2026.10.26';
           case 'hasCookies':
             return false;
           case 'setCookies':
