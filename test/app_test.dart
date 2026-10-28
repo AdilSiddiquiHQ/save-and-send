@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_lite/lucide_icons_lite.dart';
 import 'package:save_and_send/src/app.dart';
+import 'package:save_and_send/src/i18n.dart';
 
 const _methodChannelName = 'com.personal.save_and_send/native';
 const _eventChannelName = 'com.personal.save_and_send/events';
@@ -250,6 +251,28 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('LOGIN COOKIES'), findsNothing);
   });
+
+  // The picker wraps onto a second row and the sheet holds long rows, so the
+  // tight case is every language on a small screen with large text.
+  for (final language in AppLanguage.all) {
+    testWidgets('settings fits a narrow ${language.code} screen', (tester) async {
+      _setPhone(tester, width: 320, height: 640, textScale: 1.3);
+      await tester.pumpWidget(SaveAndSendApp(initialLanguage: language.code));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(LucideIcons.settings));
+      await tester.pumpAndSettle();
+
+      for (final option in AppLanguage.all) {
+        expect(
+          find.text(option.label),
+          findsOneWidget,
+          reason: 'missing ${option.label}',
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
 
 void _setPhone(

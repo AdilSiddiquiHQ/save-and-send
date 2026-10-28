@@ -250,12 +250,15 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         ),
                         child: Row(
                           children: [
-                            Text(
-                              s.version,
-                              style: theme.textTheme.bodySmall
-                                  ?.copyWith(color: kMuted),
+                            Expanded(
+                              child: Text(
+                                s.version,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall
+                                    ?.copyWith(color: kMuted),
+                              ),
                             ),
-                            const Spacer(),
+                            const SizedBox(width: 8),
                             Text(
                               _loading ? '…' : (_version ?? '—'),
                               style: theme.textTheme.labelMedium?.copyWith(
@@ -378,11 +381,13 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   children: [
                     const BrandMark(size: 22),
                     const SizedBox(width: 7),
-                    Text(
-                      '${s.personalNote}  •  v$kAppVersion',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: kMuted,
-                        letterSpacing: 0.15,
+                    Flexible(
+                      child: Text(
+                        '${s.personalNote}  •  v$kAppVersion',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: kMuted,
+                          letterSpacing: 0.15,
+                        ),
                       ),
                     ),
                   ],
@@ -498,12 +503,18 @@ class _LanguageOption extends StatelessWidget {
                   ]
                 : null,
           ),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: selected ? kDeepGreen : kMuted,
-                  fontWeight: FontWeight.w700,
-                ),
+          // `Align` with `widthFactor: 1` centres the label inside the 46 px
+          // chip without making the chip grow to the full row width.
+          child: Align(
+            alignment: Alignment.center,
+            widthFactor: 1,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: selected ? kDeepGreen : kMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
           ),
         ),
       ),

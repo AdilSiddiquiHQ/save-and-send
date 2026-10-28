@@ -6,6 +6,14 @@ All notable changes to Save & Send are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-10-28
+
+### Fixed
+
+- The selected language chip in Settings drew its label at the top of the chip
+  instead of centring it, which made "English" sit visibly higher than the rest
+  of the row.
+
 ## [1.1.0] — 2026-10-28
 
 ### Added

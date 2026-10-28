@@ -53,7 +53,7 @@ download engine runs entirely on the phone.
 | | |
 | --- | --- |
 | **Package** | `com.personal.save_and_send` |
-| **Version** | 1.1.0 (3) |
+| **Version** | 1.1.1 (4) |
 | **Devices** | Android 7.0+ (API 24), `arm64-v8a` |
 | **Output** | MP4 / H.264 / AAC-LC, ≤ 1920 px long edge, ≤ 59.5 s |
 | **Interface** | English, Urdu, Hindi, Arabic, Bengali · Material 3 · RTL-aware |
@@ -179,7 +179,7 @@ streams are not supported and are reported as errors.
 ## Install
 
 1. Open the [latest release](https://github.com/AdilSiddiquiHQ/save-and-send/releases/latest)
-   and download `SaveAndSend-v1.1.0-arm64.apk`.
+   and download `SaveAndSend-v1.1.1-arm64.apk`.
 2. Optionally verify the SHA-256 checksum published with the release.
 3. Allow your browser or file manager to install unknown apps, then open the
    APK.
@@ -213,7 +213,7 @@ Copy it to a predictable name before sharing:
 
 ```bash
 cp build/app/outputs/flutter-apk/app-release.apk \
-   SaveAndSend-v1.1.0-arm64.apk
+   SaveAndSend-v1.1.1-arm64.apk
 ```
 
 The repository deliberately keeps only `arm64-v8a`. The Python and FFmpeg
