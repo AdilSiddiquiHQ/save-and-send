@@ -80,6 +80,10 @@ makes a translation feel machine-made.
 | Recent | حالیہ | हाल के | الأخيرة | সাম্প্রতিক |
 | delete | ڈیلیٹ کریں | डिलीट करें | احذف | ডিলিট করুন |
 | Wi-Fi | وائی فائی | वाई-फ़ाई | Wi-Fi | Wi-Fi |
+| fit | فٹ | फ़िट | ضبط | ফিট |
+| trim | کاٹنا | काटना | قص | কাটা |
+| part | حصہ | हिस्सा | جزء | ভাগ |
+| compress | حجم کم کرنا | साइज़ घटाना | تصغير الحجم | সাইজ কমানো |
 
 Platform names keep their local spelling: `Instagram` in Hindi/Bengali,
 `إنستغرام` in Arabic, `انسٹاگرام` in Urdu.
@@ -113,8 +117,9 @@ Platform names keep their local spelling: `Instagram` in Hindi/Bengali,
 | Bengali | `bn` | Bengali | LTR | 1.1.0 | First pass — wants a native read |
 
 1.2.0 added 37 strings to every language (quality, sizes, the Recent sheet,
-Wi-Fi only, the engine channel, and the link check). They follow the same voice
-as the existing text, but they are new: the first read-through by a native
+Wi-Fi only, the engine channel, and the link check). 1.3.0 added 23 more for
+the For Status tools, the trim dialog, and the parts list. They follow the same
+voice as the existing text, but they are new: the first read-through by a native
 speaker is still the most useful thing anyone can contribute.
 
 If you speak one of the "first pass" languages, open an issue with the string

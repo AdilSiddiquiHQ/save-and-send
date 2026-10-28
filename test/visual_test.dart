@@ -10,6 +10,7 @@ const _methodChannelName = 'com.personal.save_and_send/native';
 const _eventChannelName = 'com.personal.save_and_send/events';
 
 String? _lastRequestId;
+String? _lastTransformId;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -79,6 +80,9 @@ void main() {
             };
           case 'download':
             _lastRequestId = call.arguments['requestId'] as String?;
+            return null;
+          case 'transform':
+            _lastTransformId = call.arguments['requestId'] as String?;
             return null;
           case 'probe':
             return <String, dynamic>{
@@ -156,6 +160,105 @@ void main() {
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/result.png'),
+    );
+  });
+
+  testWidgets('status tools visual', (tester) async {
+    _phone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextField).first,
+      'https://www.instagram.com/reel/ABC123/',
+    );
+    await tester.ensureVisible(find.text('Download video'));
+    await tester.tap(find.text('Download video'));
+    await tester.pump();
+    await tester.pump();
+    await _emit({
+      'type': 'done',
+      'requestId': _lastRequestId,
+      'path': '/tmp/missing.mp4',
+      'title': 'A calm evening by the sea',
+      'durationMs': 59500,
+      'width': 1080,
+      'height': 1920,
+      'hasAudio': true,
+      'thumbnailPath': null,
+      'thumbnailUrl': null,
+      'trimmed': false,
+      'sizeBytes': 5 * 1024 * 1024,
+    });
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('For Status'));
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/status.png'),
+    );
+  });
+
+  testWidgets('parts visual', (tester) async {
+    _phone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextField).first,
+      'https://www.instagram.com/reel/ABC123/',
+    );
+    await tester.ensureVisible(find.text('Download video'));
+    await tester.tap(find.text('Download video'));
+    await tester.pump();
+    await tester.pump();
+    final id = _lastRequestId;
+    await _emit({
+      'type': 'done',
+      'requestId': id,
+      'path': '/tmp/missing.mp4',
+      'title': 'A long clip',
+      'durationMs': 65000,
+      'width': 1080,
+      'height': 1920,
+      'hasAudio': true,
+      'trimmed': false,
+      'sizeBytes': 12 * 1024 * 1024,
+    });
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Split into parts'));
+    await tester.tap(find.text('Split into parts'));
+    await tester.pumpAndSettle();
+    await _emit({
+      'type': 'transformed',
+      'requestId': _lastTransformId,
+      'items': [
+        {
+          'path': '/tmp/part1.mp4',
+          'title': 'A long clip · 1',
+          'durationMs': 59500,
+          'width': 1080,
+          'height': 1920,
+          'hasAudio': true,
+          'sizeBytes': 5 * 1024 * 1024,
+          'uri': 'content://media/external/video/media/71',
+          'kind': 'video',
+        },
+        {
+          'path': '/tmp/part2.mp4',
+          'title': 'A long clip · 2',
+          'durationMs': 5500,
+          'width': 1080,
+          'height': 1920,
+          'hasAudio': true,
+          'sizeBytes': 512 * 1024,
+          'uri': 'content://media/external/video/media/72',
+          'kind': 'video',
+        },
+      ],
+    });
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/parts.png'),
     );
   });
 

@@ -10,6 +10,7 @@ const _eventChannelName = 'com.personal.save_and_send/events';
 
 String? _lastRequestId;
 Map<dynamic, dynamic>? _lastDownloadArgs;
+Map<dynamic, dynamic>? _lastTransformArgs;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +18,7 @@ void main() {
   setUp(() {
     _lastRequestId = null;
     _lastDownloadArgs = null;
+    _lastTransformArgs = null;
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
@@ -38,6 +40,9 @@ void main() {
           case 'download':
             _lastRequestId = call.arguments['requestId'] as String?;
             _lastDownloadArgs = call.arguments as Map<dynamic, dynamic>?;
+            return null;
+          case 'transform':
+            _lastTransformArgs = call.arguments as Map<dynamic, dynamic>?;
             return null;
           case 'probe':
             return <String, dynamic>{
@@ -153,6 +158,190 @@ void main() {
     expect(find.text('Saved to your Gallery'), findsOneWidget);
     expect(find.text('0:59'), findsOneWidget);
     expect(find.text('5.0 MB'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('splitting a clip lists every Status part', (tester) async {
+    _setPhone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      'https://www.instagram.com/reel/ABC123/',
+    );
+    await tester.ensureVisible(find.text('Download video'));
+    await tester.tap(find.text('Download video'));
+    await tester.pump();
+    await tester.pump();
+
+    final id = _lastRequestId;
+    await _emit({
+      'type': 'done',
+      'requestId': id,
+      'path': '/tmp/save_and_send_test_missing.mp4',
+      'title': 'A long clip',
+      'durationMs': 65000,
+      'width': 1080,
+      'height': 1920,
+      'hasAudio': true,
+      'trimmed': false,
+      'sizeBytes': 12 * 1024 * 1024,
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.text('For Status'), findsOneWidget);
+    await tester.ensureVisible(find.text('Split into parts'));
+    await tester.tap(find.text('Split into parts'));
+    await tester.pump();
+    await tester.pump();
+
+    final transformId = _lastTransformArgs?['requestId'] as String?;
+    expect(transformId, isNotNull);
+    expect(_lastTransformArgs?['mode'], 'split');
+
+    await _emit({
+      'type': 'stage',
+      'requestId': transformId,
+      'stage': 'transforming',
+    });
+    await tester.pump();
+    expect(find.text('Preparing for Status…'), findsOneWidget);
+
+    await _emit({
+      'type': 'transformed',
+      'requestId': transformId,
+      'items': [
+        {
+          'path': '/tmp/save_and_send_part_1.mp4',
+          'title': 'A long clip · 1',
+          'durationMs': 59500,
+          'width': 1080,
+          'height': 1920,
+          'hasAudio': true,
+          'sizeBytes': 5 * 1024 * 1024,
+          'uri': 'content://media/external/video/media/71',
+          'savedPath': '/storage/emulated/0/Movies/part1.mp4',
+          'kind': 'video',
+        },
+        {
+          'path': '/tmp/save_and_send_part_2.mp4',
+          'title': 'A long clip · 2',
+          'durationMs': 5500,
+          'width': 1080,
+          'height': 1920,
+          'hasAudio': true,
+          'sizeBytes': 512 * 1024,
+          'uri': 'content://media/external/video/media/72',
+          'savedPath': '/storage/emulated/0/Movies/part2.mp4',
+          'kind': 'video',
+        },
+      ],
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.text('PARTS'), findsOneWidget);
+    expect(find.text('Parts 1'), findsOneWidget);
+    expect(find.text('Parts 2'), findsOneWidget);
+    expect(find.text('2 parts saved to your Gallery.'), findsOneWidget);
+    expect(find.text('A long clip · 1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.ensureVisible(find.text('Parts 2'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Parts 2'));
+    await tester.pumpAndSettle();
+    expect(find.text('A long clip · 2'), findsWidgets);
+  });
+
+  testWidgets('trim and target size dialogs pass their values', (tester) async {
+    _setPhone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      'https://www.instagram.com/reel/ABC123/',
+    );
+    await tester.ensureVisible(find.text('Download video'));
+    await tester.tap(find.text('Download video'));
+    await tester.pump();
+    await tester.pump();
+
+    await _emit({
+      'type': 'done',
+      'requestId': _lastRequestId,
+      'path': '/tmp/save_and_send_test_missing.mp4',
+      'title': 'A test video',
+      'durationMs': 60000,
+      'width': 1080,
+      'height': 1920,
+      'hasAudio': true,
+      'trimmed': false,
+      'sizeBytes': 9 * 1024 * 1024,
+    });
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Trim'));
+    await tester.tap(find.text('Trim'));
+    await tester.pumpAndSettle();
+    expect(find.text('Trim the clip'), findsOneWidget);
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(_lastTransformArgs?['mode'], 'trim');
+    expect(_lastTransformArgs?['startMs'], 0);
+    expect(_lastTransformArgs?['endMs'], 59500);
+
+    await _emit({
+      'type': 'cancelled',
+      'requestId': _lastTransformArgs?['requestId'],
+    });
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Make smaller'));
+    await tester.tap(find.text('Make smaller'));
+    await tester.pumpAndSettle();
+    expect(find.text('How small?'), findsOneWidget);
+    await tester.tap(find.text('16 MB'));
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(_lastTransformArgs?['mode'], 'compress');
+    expect(_lastTransformArgs?['targetBytes'], 16 * 1024 * 1024);
+  });
+
+  testWidgets('Status tools fit a narrow Arabic screen', (tester) async {
+    _setPhone(tester, width: 320, height: 640, textScale: 1.3);
+    await tester.pumpWidget(const SaveAndSendApp(initialLanguage: 'ar'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      'https://www.instagram.com/reel/ABC123/',
+    );
+    await tester.ensureVisible(find.text('نزّل الفيديو'));
+    await tester.tap(find.text('نزّل الفيديو'));
+    await tester.pump();
+    await tester.pump();
+
+    await _emit({
+      'type': 'done',
+      'requestId': _lastRequestId,
+      'path': '/tmp/missing.mp4',
+      'title': 'مقطع طويل',
+      'durationMs': 65000,
+      'width': 1080,
+      'height': 1920,
+      'hasAudio': true,
+      'trimmed': false,
+      'sizeBytes': 12 * 1024 * 1024,
+    });
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('للحالة'));
+    await tester.pumpAndSettle();
+    expect(find.text('للحالة'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

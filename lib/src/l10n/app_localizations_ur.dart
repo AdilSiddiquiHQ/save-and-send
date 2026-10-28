@@ -487,4 +487,75 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get diagnosticsRunning => 'جانچ ہو رہی ہے…';
+
+  @override
+  String get statusTools => 'اسٹیٹس کے لیے';
+
+  @override
+  String get statusToolsHelp => 'اس کلپ کو اسٹیٹس کے قابل بنائیں۔';
+
+  @override
+  String get fitStatus => 'اسٹیٹس میں فٹ کریں';
+
+  @override
+  String get fitStatusHelp => 'دھندلا بیک گراؤنڈ، پوری ویڈیو، 9:16۔';
+
+  @override
+  String get splitStatus => 'حصوں میں تقسیم کریں';
+
+  @override
+  String get splitStatusHelp => '60 سیکنڈ سے چھوٹے حصے بن جائیں گے۔';
+
+  @override
+  String get trimVideo => 'کاٹیں';
+
+  @override
+  String get trimVideoHelp => 'صرف وہ حصہ رکھیں جو آپ چاہتے ہیں۔';
+
+  @override
+  String get compressVideo => 'حجم کم کریں';
+
+  @override
+  String get compressVideoHelp => 'فائل کو منتخب سائز تک چھوٹا کریں۔';
+
+  @override
+  String get trimTitle => 'کلپ کاٹیں';
+
+  @override
+  String get trimHelp => 'جو حصہ رکھنا ہے، کنڈلیاں کھینچ کر چنیں۔';
+
+  @override
+  String get trimStart => 'شروع';
+
+  @override
+  String get trimEnd => 'اختتام';
+
+  @override
+  String get compressTitle => 'کتنے ایم بی تک؟';
+
+  @override
+  String get compressHelp => 'تصویر اسٹیٹس کے لیے کافی صاف رہے گی۔';
+
+  @override
+  String get targetSize => 'سائز';
+
+  @override
+  String get transformDone => 'اسٹیٹس کے لیے تیار ہے۔';
+
+  @override
+  String partsSaved(int count) {
+    return 'گیلری میں $count حصے محفوظ ہو گئے۔';
+  }
+
+  @override
+  String get transformFailed => 'یہ کلپ تیار نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get transforming => 'اسٹیٹس کے لیے تیار کیا جا رہا ہے…';
+
+  @override
+  String get apply => 'لگائیں';
+
+  @override
+  String get parts => 'حصے';
 }

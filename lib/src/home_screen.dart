@@ -14,7 +14,16 @@ import 'native.dart';
 import 'settings_sheet.dart';
 import 'theme.dart';
 
-enum Phase { booting, idle, preparing, downloading, result, error, engineError }
+enum Phase {
+  booting,
+  idle,
+  preparing,
+  downloading,
+  transforming,
+  result,
+  error,
+  engineError,
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -46,6 +55,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _starting = false;
 
   VideoResult? _result;
+  // More than one file when a clip was split for Status.
+  List<VideoResult>? _parts;
+  int _partIndex = 0;
   String? _errorCode;
   String? _errorMessage;
   String? _errorDetail;
@@ -83,7 +95,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<HistoryEntry> _history = const [];
 
   AppLocalizations get s => widget.strings;
-  bool get _busy => _phase == Phase.preparing || _phase == Phase.downloading;
+  bool get _busy =>
+      _phase == Phase.preparing ||
+      _phase == Phase.downloading ||
+      _phase == Phase.transforming;
 
   @override
   void initState() {
@@ -376,6 +391,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _onDone(event);
         break;
 
+      case 'transformed':
+        _onTransformed(event);
+        break;
+
       case 'error':
         _onError(event);
         break;
@@ -397,6 +416,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _videoReady = false;
       _videoPaused = false;
       _muted = false;
+      _parts = null;
+      _partIndex = 0;
     });
     _screen(false);
     unawaited(HapticFeedback.mediumImpact());
@@ -417,6 +438,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _onError(DownloadEvent event) {
     if (!mounted) return;
+    // A failed Status encode should not throw away the finished download.
+    if (_phase == Phase.transforming && _result != null) {
+      setState(() {
+        _phase = Phase.result;
+        _progress = 100;
+        _stage = 'saving';
+        _cancelling = false;
+      });
+      _screen(false);
+      unawaited(HapticFeedback.heavyImpact());
+      _snack(s.transformFailed);
+      return;
+    }
     setState(() {
       _phase = Phase.error;
       _errorCode = event.code ?? 'generic';
@@ -431,6 +465,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _onCancelled() {
     if (!mounted) return;
+    if (_phase == Phase.transforming && _result != null) {
+      setState(() {
+        _phase = Phase.result;
+        _progress = 100;
+        _stage = 'saving';
+        _cancelling = false;
+      });
+      _screen(false);
+      return;
+    }
     setState(() {
       _phase = Phase.idle;
       _requestId = null;
@@ -439,6 +483,166 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _cancelling = false;
     });
     _screen(false);
+  }
+
+  Future<void> _onTransformed(DownloadEvent event) async {
+    final thumbnail = _result?.thumbnailPath;
+    final thumbnailUrl = _result?.thumbnailUrl;
+    final results = event.items
+        .map((item) => item.toResult(
+              thumbnailPath: thumbnail,
+              thumbnailUrl: thumbnailUrl,
+            ))
+        .where((item) => item.path.isNotEmpty)
+        .toList(growable: false);
+    if (!mounted) return;
+    if (results.isEmpty) {
+      setState(() {
+        _phase = Phase.result;
+        _progress = 100;
+        _stage = 'saving';
+        _cancelling = false;
+      });
+      _screen(false);
+      _snack(s.transformFailed);
+      return;
+    }
+
+    final first = results.first;
+    setState(() {
+      _phase = Phase.result;
+      _result = first;
+      _parts = results.length > 1 ? results : null;
+      _partIndex = 0;
+      _gallerySaved = first.uri != null;
+      _progress = 100;
+      _stage = 'saving';
+      _cancelling = false;
+    });
+    _screen(false);
+    unawaited(HapticFeedback.mediumImpact());
+
+    var added = 0;
+    // add() inserts at the top, so walk backwards to keep part 1 first.
+    for (final item in results.reversed) {
+      if (item.uri == null) continue;
+      await HistoryStore.add(HistoryEntry.fromResult(item));
+      added += 1;
+    }
+    if (added > 0) unawaited(_loadHistory());
+
+    if (added > 1) {
+      _snack(s.partsSaved(added));
+    } else if (added == 1) {
+      _snack(s.transformDone);
+    } else {
+      _snack(s.notSavedGallery);
+    }
+    await _startVideo(first);
+  }
+
+  // ---------------------------------------------------------------------
+  // Status tools
+  // ---------------------------------------------------------------------
+
+  Future<void> _startTransform(
+    String mode, {
+    int startMs = 0,
+    int endMs = 0,
+    int targetBytes = 0,
+  }) async {
+    final result = _result;
+    if (result == null || _busy || result.path.isEmpty) return;
+    final requestId = DateTime.now().microsecondsSinceEpoch.toString();
+    await _disposeVideo();
+    if (!mounted) return;
+    setState(() {
+      _phase = Phase.transforming;
+      _requestId = requestId;
+      _progress = 0;
+      _eta = -1;
+      _stage = 'transforming';
+      _cancelling = false;
+    });
+    _screen(true);
+    try {
+      await NativeBridge.transform(
+        requestId: requestId,
+        path: result.path,
+        title: result.title,
+        mode: mode,
+        startMs: startMs,
+        endMs: endMs,
+        targetBytes: targetBytes,
+      );
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _phase = Phase.result;
+        _progress = 100;
+        _stage = 'saving';
+        _cancelling = false;
+      });
+      _screen(false);
+      _snack(e.code == 'BUSY' ? s.busy : s.transformFailed);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _phase = Phase.result;
+        _progress = 100;
+        _stage = 'saving';
+        _cancelling = false;
+      });
+      _screen(false);
+      _snack(s.transformFailed);
+    }
+  }
+
+  Future<void> _openTrim() async {
+    final result = _result;
+    if (result == null || result.durationMs < 1000) return;
+    final picked = await showDialog<({int startMs, int endMs})>(
+      context: context,
+      builder: (_) => _TrimDialog(
+        strings: s,
+        durationMs: result.durationMs,
+      ),
+    );
+    if (picked == null || !mounted) return;
+    await _startTransform(
+      'trim',
+      startMs: picked.startMs,
+      endMs: picked.endMs,
+    );
+  }
+
+  Future<void> _openCompress() async {
+    final result = _result;
+    if (result == null) return;
+    final target = await showDialog<int>(
+      context: context,
+      builder: (_) => _CompressDialog(
+        strings: s,
+        currentBytes: result.sizeBytes,
+        sizeText: _sizeText(result.sizeBytes),
+      ),
+    );
+    if (target == null || !mounted) return;
+    await _startTransform('compress', targetBytes: target);
+  }
+
+  Future<void> _openPart(int index) async {
+    final parts = _parts;
+    if (parts == null || index < 0 || index >= parts.length) return;
+    final part = parts[index];
+    await _disposeVideo();
+    if (!mounted) return;
+    setState(() {
+      _result = part;
+      _partIndex = index;
+      _gallerySaved = part.uri != null;
+    });
+    await _startVideo(part);
   }
 
   // ---------------------------------------------------------------------
@@ -490,6 +694,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _inputError = false;
         _lastUrl = url;
         _urlController.text = url;
+        _parts = null;
+        _partIndex = 0;
       });
       _urlFocus.unfocus();
 
@@ -1020,6 +1226,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return _buildIdle();
       case Phase.preparing:
       case Phase.downloading:
+      case Phase.transforming:
         return _buildDownloading();
       case Phase.result:
         return _buildResult();
@@ -1228,6 +1435,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildDownloading() {
     final theme = Theme.of(context);
     final preparing = _phase == Phase.preparing;
+    final transforming = _phase == Phase.transforming;
     final value = (_progress / 100).clamp(0.0, 1.0);
     final stage = s.stageFor(_stage);
     final percentLabel = preparing ? '—' : '${_progress.round()}%';
@@ -1307,7 +1515,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 const SizedBox(height: 18),
                 NoteBanner(
                   icon: LucideIcons.info,
-                  text: s.progressHelp,
+                  text: transforming ? s.statusToolsHelp : s.progressHelp,
                 ),
               ],
             ),
@@ -1341,6 +1549,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _ResultHeader(strings: s, onClose: _done),
+          if (_parts != null && _parts!.length > 1) ...[
+            const SizedBox(height: 14),
+            _PartsCard(
+              strings: s,
+              parts: _parts!,
+              selected: _partIndex,
+              onSelect: _openPart,
+            ),
+          ],
           const SizedBox(height: 16),
           _Preview(
             result: result,
@@ -1421,6 +1638,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ],
             ),
           ),
+          if (!result.isAudio) ...[
+            const SizedBox(height: 18),
+            _StatusToolsCard(
+              strings: s,
+              onFit: () => _startTransform('fit'),
+              onSplit: () => _startTransform('split'),
+              onTrim: _openTrim,
+              onCompress: _openCompress,
+            ),
+          ],
           const SizedBox(height: 23),
           SectionHeading(
             title: s.sendSection,
@@ -3142,6 +3369,511 @@ class _HistorySheetState extends State<_HistorySheet> {
         size: 20,
         color: entry.isAudio ? kAmber : kGreen,
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Status tools
+// ---------------------------------------------------------------------------
+
+String _clockText(int ms) {
+  if (ms <= 0) return '—';
+  final total = (ms / 1000).floor();
+  return '${total ~/ 60}:${(total % 60).toString().padLeft(2, '0')}';
+}
+
+/// The four one-tap rescues for a clip that WhatsApp would otherwise reject.
+class _StatusToolsCard extends StatelessWidget {
+  const _StatusToolsCard({
+    required this.strings,
+    required this.onFit,
+    required this.onSplit,
+    required this.onTrim,
+    required this.onCompress,
+  });
+
+  final AppLocalizations strings;
+  final VoidCallback onFit;
+  final VoidCallback onSplit;
+  final VoidCallback onTrim;
+  final VoidCallback onCompress;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SurfaceCard(
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const EmptyStateIcon(
+                icon: LucideIcons.smartphone,
+                size: 38,
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      strings.statusTools,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      strings.statusToolsHelp,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: kMuted,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1),
+          _ToolRow(
+            icon: LucideIcons.rectangleVertical,
+            title: strings.fitStatus,
+            help: strings.fitStatusHelp,
+            onTap: onFit,
+          ),
+          const Divider(height: 1),
+          _ToolRow(
+            icon: LucideIcons.columns2,
+            title: strings.splitStatus,
+            help: strings.splitStatusHelp,
+            onTap: onSplit,
+          ),
+          const Divider(height: 1),
+          _ToolRow(
+            icon: LucideIcons.scissors,
+            title: strings.trimVideo,
+            help: strings.trimVideoHelp,
+            onTap: onTrim,
+          ),
+          const Divider(height: 1),
+          _ToolRow(
+            icon: LucideIcons.fileDown,
+            title: strings.compressVideo,
+            help: strings.compressVideoHelp,
+            onTap: onCompress,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolRow extends StatelessWidget {
+  const _ToolRow({
+    required this.icon,
+    required this.title,
+    required this.help,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String help;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      button: true,
+      label: title,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 11),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kSurfaceMuted,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: kLine),
+                ),
+                child: Icon(icon, size: 16, color: kDeepGreen),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: theme.textTheme.titleSmall),
+                    const SizedBox(height: 2),
+                    Text(
+                      help,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: kMuted,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              Transform.flip(
+                flipX: Directionality.of(context) == TextDirection.rtl,
+                child: const Icon(
+                  LucideIcons.chevronRight,
+                  size: 16,
+                  color: kMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The list of parts produced by "Split into parts".
+class _PartsCard extends StatelessWidget {
+  const _PartsCard({
+    required this.strings,
+    required this.parts,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final AppLocalizations strings;
+  final List<VideoResult> parts;
+  final int selected;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SurfaceCard(
+      padding: const EdgeInsets.fromLTRB(10, 12, 10, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 8, bottom: 4),
+            child: Text(
+              strings.parts.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: kMuted,
+                letterSpacing: 0.9,
+              ),
+            ),
+          ),
+          for (var index = 0; index < parts.length; index++)
+            _partRow(context, theme, index),
+        ],
+      ),
+    );
+  }
+
+  Widget _partRow(BuildContext context, ThemeData theme, int index) {
+    final part = parts[index];
+    final isSelected = index == selected;
+    final detail = [
+      _clockText(part.durationMs),
+      if (part.sizeBytes > 0) _bytesLabel(part.sizeBytes),
+    ].join('  ·  ');
+
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: '${strings.parts} ${index + 1}',
+      child: InkWell(
+        onTap: () => onSelect(index),
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+          decoration: BoxDecoration(
+            color: isSelected ? kBrandTint : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: isSelected ? kSurface : kSurfaceMuted,
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: kLine),
+                ),
+                child: Icon(
+                  isSelected ? LucideIcons.check : LucideIcons.film,
+                  size: 15,
+                  color: isSelected ? kGreen : kMuted,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${strings.parts} ${index + 1}',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: isSelected ? kDeepGreen : kInk,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: kMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrimDialog extends StatefulWidget {
+  const _TrimDialog({required this.strings, required this.durationMs});
+
+  final AppLocalizations strings;
+  final int durationMs;
+
+  @override
+  State<_TrimDialog> createState() => _TrimDialogState();
+}
+
+class _TrimDialogState extends State<_TrimDialog> {
+  static const double _maxLength = 59.5;
+
+  late final double _max = widget.durationMs / 1000;
+  late double _start = 0;
+  late double _end = _max < _maxLength ? _max : _maxLength;
+
+  String _clock(double seconds) {
+    final total = seconds.round();
+    return '${total ~/ 60}:${(total % 60).toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final s = widget.strings;
+    return AlertDialog(
+      scrollable: true,
+      title: Text(s.trimTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            s.trimHelp,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: kMuted,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 14),
+          RangeSlider(
+            values: RangeValues(_start, _end),
+            min: 0,
+            max: _max,
+            divisions: (_max * 2).round().clamp(2, 1200),
+            labels: RangeLabels(_clock(_start), _clock(_end)),
+            onChanged: (values) {
+              var start = values.start;
+              var end = values.end;
+              if (end - start > _maxLength) {
+                final movingStart =
+                    (start - _start).abs() > (end - _end).abs();
+                if (movingStart) {
+                  end = start + _maxLength;
+                } else {
+                  start = end - _maxLength;
+                }
+              }
+              setState(() {
+                _start = start;
+                _end = end;
+              });
+            },
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: _TrimValue(
+                  label: s.trimStart,
+                  value: _clock(_start),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _TrimValue(
+                  label: s.trimEnd,
+                  value: _clock(_end),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(s.cancel),
+        ),
+        FilledButton(
+          onPressed: () {
+            final start = (_start * 1000)
+                .round()
+                .clamp(0, widget.durationMs - 500)
+                .toInt();
+            var end = (_end * 1000)
+                .round()
+                .clamp(start + 500, widget.durationMs)
+                .toInt();
+            if (end - start > 59500) end = start + 59500;
+            Navigator.of(context).pop((
+              startMs: start,
+              endMs: end,
+            ));
+          },
+          child: Text(s.apply),
+        ),
+      ],
+    );
+  }
+}
+
+class _TrimValue extends StatelessWidget {
+  const _TrimValue({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: kSurfaceMuted,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kLine),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: kMuted,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(value, style: theme.textTheme.titleMedium),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompressDialog extends StatefulWidget {
+  const _CompressDialog({
+    required this.strings,
+    required this.currentBytes,
+    required this.sizeText,
+  });
+
+  final AppLocalizations strings;
+  final int currentBytes;
+  final String sizeText;
+
+  @override
+  State<_CompressDialog> createState() => _CompressDialogState();
+}
+
+class _CompressDialogState extends State<_CompressDialog> {
+  static const _presets = [8, 16, 24];
+
+  late int _megabytes = _initial();
+
+  int _initial() {
+    final currentMb = widget.currentBytes / (1024 * 1024);
+    var choice = _presets.first;
+    for (final mb in _presets) {
+      if (mb < currentMb) choice = mb;
+    }
+    return choice;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final s = widget.strings;
+    return AlertDialog(
+      scrollable: true,
+      title: Text(s.compressTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            s.compressHelp,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: kMuted,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final mb in _presets)
+                ChoiceChip(
+                  label: Text('$mb MB'),
+                  selected: _megabytes == mb,
+                  onSelected: (_) => setState(() => _megabytes = mb),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            '${s.targetSize}: ${widget.sizeText}',
+            style: theme.textTheme.bodySmall?.copyWith(color: kMuted),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(s.cancel),
+        ),
+        FilledButton(
+          onPressed: () =>
+              Navigator.of(context).pop(_megabytes * 1024 * 1024),
+          child: Text(s.apply),
+        ),
+      ],
     );
   }
 }

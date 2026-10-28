@@ -486,4 +486,75 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get diagnosticsRunning => 'जाँच हो रही है…';
+
+  @override
+  String get statusTools => 'Status के लिए';
+
+  @override
+  String get statusToolsHelp => 'क्लिप को Status के लिए तैयार करें।';
+
+  @override
+  String get fitStatus => 'Status में फ़िट करें';
+
+  @override
+  String get fitStatusHelp => 'धुँधला बैकग्राउंड, पूरा वीडियो, 9:16।';
+
+  @override
+  String get splitStatus => 'हिस्सों में बाँटें';
+
+  @override
+  String get splitStatusHelp => '60 सेकंड से छोटे हिस्से बन जाएँगे।';
+
+  @override
+  String get trimVideo => 'काटें';
+
+  @override
+  String get trimVideoHelp => 'सिर्फ़ वो हिस्सा रखें जो चाहिए।';
+
+  @override
+  String get compressVideo => 'साइज़ घटाएँ';
+
+  @override
+  String get compressVideoHelp => 'फ़ाइल को चुने हुए साइज़ तक छोटा करें।';
+
+  @override
+  String get trimTitle => 'क्लिप काटें';
+
+  @override
+  String get trimHelp => 'जो हिस्सा रखना है, हैंडल खींचकर चुनें।';
+
+  @override
+  String get trimStart => 'शुरू';
+
+  @override
+  String get trimEnd => 'आख़िर';
+
+  @override
+  String get compressTitle => 'कितना छोटा?';
+
+  @override
+  String get compressHelp => 'तस्वीर Status के लिए काफ़ी साफ़ रहेगी।';
+
+  @override
+  String get targetSize => 'साइज़';
+
+  @override
+  String get transformDone => 'Status के लिए तैयार।';
+
+  @override
+  String partsSaved(int count) {
+    return 'गैलरी में $count हिस्से सेव हो गए।';
+  }
+
+  @override
+  String get transformFailed => 'ये क्लिप तैयार नहीं हो सकी। फिर कोशिश करें।';
+
+  @override
+  String get transforming => 'Status के लिए तैयार हो रहा है…';
+
+  @override
+  String get apply => 'लगाएँ';
+
+  @override
+  String get parts => 'हिस्से';
 }

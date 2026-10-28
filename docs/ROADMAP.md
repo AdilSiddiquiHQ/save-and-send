@@ -7,13 +7,20 @@ personal tool and features are added when they earn their maintenance cost.
 Effort is a rough shape, not a schedule: **S** (an afternoon), **M** (a few
 sessions), **L** (a week or more).
 
+## Shipped in 1.3.0
+
+**For Status** sits on the result screen and re-encodes the finished file on the
+phone: fit a landscape or square clip into 1080 × 1920 with a blurred
+background, split anything long into 59.5-second parts, trim a range, or shrink
+the file to an 8, 16, or 24 MB target. Every output is saved on its own and
+listed with its own share buttons.
+
 ## Shipped in 1.2.0
 
 The everyday pack: quality and size before download, sound-only MP3, real
 filenames, clipboard detection, a Recent sheet, Wi-Fi only, "try another
 method", a redacted link check, the engine channel picker, and a wider set of
-recognised sites. The Status encode tools (fit to 9:16, split into 60-second
-parts, trim, compress to a target) are the next release.
+recognised sites.
 
 ## 1. Reliability — the downloads have to work
 
@@ -35,7 +42,7 @@ parts, trim, compress to a target) are the next release.
 | --- | --- | --- |
 | **Download queue** | Share or paste several links and let them run one after another. Currently a second share is held in memory and lost on exit. | M |
 | **Recent downloads list** | *(Shipped in 1.2.0)* Re-share or delete something saved earlier without hunting through Gallery. | M |
-| **Trim editor** | Pick a start and end point, or send the full video without the 59.5-second cut. | L |
+| **Trim editor** | *(Shipped in 1.3.0)* Pick a start and end point on the result screen, capped at 59.5 seconds. | M |
 | **Quality picker** | *(Shipped in 1.2.0)* Heights from 1080p down, with estimated sizes. | S |
 | **Audio-only export** | *(Shipped in 1.2.0 as MP3)* Save the soundtrack for voice notes and music. | S |
 | **Wi-Fi-only downloads** | *(Shipped in 1.2.0)* Refuses to start on mobile data and says why. | S |
@@ -53,7 +60,10 @@ parts, trim, compress to a target) are the next release.
 | --- | --- | --- |
 | **Direct Share targets** | Put frequent WhatsApp chats at the top of the system share sheet. | M |
 | **Accept shared video files** | Handle `video/*` shares, not only `text/*`, so a forwarded video can be re-sent optimized. | S |
-| **Status trim presets** | 15 s, 30 s, 59.5 s, or full length. | S |
+| **Status trim presets** | *(Shipped in 1.3.0 as a range slider)* Still open: one-tap 15 s / 30 s / 59.5 s buttons. | S |
+| **Fit styles** | Choose a blurred frame, a solid colour, or a plain black pad instead of the blur. | S |
+| **Cover frame** | Pick the frame WhatsApp shows before the video plays. | M |
+| **Caption on the clip** | Burn a short line of text into the video for Status. | M |
 | **Share the original link too** | One action to send the cleaned-up URL alongside the file. | S |
 | **"Save to Gallery" on the result screen** | *(Exists as a retry)* Make it explicit even when the first save succeeded. | S |
 

@@ -67,8 +67,11 @@ class HistoryEntry {
 
   factory HistoryEntry.fromResult(VideoResult result) {
     final now = DateTime.now();
+    // A split adds several entries in the same millisecond, so the timestamp
+    // alone is not enough to keep them apart.
+    final suffix = result.path.hashCode.abs().toRadixString(36);
     return HistoryEntry(
-      id: now.microsecondsSinceEpoch.toString(),
+      id: '${now.microsecondsSinceEpoch}-$suffix',
       title: result.title,
       createdAt: now,
       sizeBytes: result.sizeBytes,

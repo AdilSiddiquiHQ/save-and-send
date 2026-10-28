@@ -53,7 +53,7 @@ download engine runs entirely on the phone.
 | | |
 | --- | --- |
 | **Package** | `com.personal.save_and_send` |
-| **Version** | 1.2.0 (5) |
+| **Version** | 1.3.0 (6) |
 | **Devices** | Android 7.0+ (API 24), `arm64-v8a` |
 | **Output** | MP4 / H.264 / AAC-LC, ≤ 1920 px long edge, ≤ 59.5 s · MP3 192 kbps |
 | **Interface** | English, Urdu, Hindi, Arabic, Bengali · Material 3 · RTL-aware |
@@ -64,30 +64,38 @@ download engine runs entirely on the phone.
 
 <table>
   <tr>
-    <td align="center" width="33%">
-      <img src="docs/screenshots/idle.png" width="200" alt="Idle screen with link composer" /><br/>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/idle.png" width="190" alt="Idle screen with link composer" /><br/>
       <sub><strong>Save a link</strong><br/>Share sheet or paste</sub>
     </td>
-    <td align="center" width="33%">
-      <img src="docs/screenshots/probe.png" width="200" alt="Quality and size picker under a pasted link" /><br/>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/probe.png" width="190" alt="Quality and size picker under a pasted link" /><br/>
       <sub><strong>Pick the size</strong><br/>Quality and MB before download</sub>
     </td>
-    <td align="center" width="33%">
-      <img src="docs/screenshots/result.png" width="200" alt="Result screen with preview and share buttons" /><br/>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/result.png" width="190" alt="Result screen with preview and share buttons" /><br/>
       <sub><strong>Ready to send</strong><br/>Preview, Gallery status, actions</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/status.png" width="190" alt="For Status tools card" /><br/>
+      <sub><strong>For Status</strong><br/>Fit, split, trim, shrink</sub>
     </td>
   </tr>
   <tr>
-    <td align="center" width="33%">
-      <img src="docs/screenshots/history.png" width="200" alt="Recent downloads sheet" /><br/>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/parts.png" width="190" alt="A split clip shown as numbered parts" /><br/>
+      <sub><strong>Every part</strong><br/>Send them in order</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/history.png" width="190" alt="Recent downloads sheet" /><br/>
       <sub><strong>Recent</strong><br/>Open, re-send, or delete</sub>
     </td>
-    <td align="center" width="33%">
-      <img src="docs/screenshots/settings.png" width="200" alt="Settings sheet" /><br/>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/settings.png" width="190" alt="Settings sheet" /><br/>
       <sub><strong>Settings</strong><br/>Language, engine, Wi-Fi, cookies</sub>
     </td>
-    <td align="center" width="33%">
-      <img src="docs/screenshots/urdu.png" width="200" alt="Urdu interface" /><br/>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/urdu.png" width="190" alt="Urdu interface" /><br/>
       <sub><strong>اردو</strong><br/>Full RTL layout and typography</sub>
     </td>
   </tr>
@@ -110,6 +118,11 @@ download engine runs entirely on the phone.
   offers it with one tap. It never starts on its own.
 - **Recent shelf.** The last 30 downloads, with a thumbnail, size, and date.
   Open, re-send, or delete without hunting through the Gallery.
+- **Ready for Status.** One card after the download: fit a landscape clip into
+  9:16 with a blurred background, split anything long into 59.5-second parts,
+  trim to the part you want, or shrink the file to 8, 16, or 24 MB. Every
+  result is saved to the Gallery and added to Recent, and the parts stay in
+  order.
 - **Sound, preserved.** Separate video and audio streams are merged, and the
   output is normalized to H.264 video and AAC-LC audio when the source has
   sound.
@@ -165,6 +178,10 @@ flowchart LR
    lost.
 5. **Save and share.** The finished MP4 is copied to the Gallery and exposed to
    WhatsApp through a read-only `FileProvider` URI.
+6. **Rescue it for Status (optional).** The result screen can re-encode the
+   finished file: pad it to 9:16 with a blurred background, cut it into
+   59.5-second parts, trim a range, or hit a target size with a bitrate budget.
+   Each output is saved and listed, with its own share buttons.
 
 For the full pipeline, channel contract, state machine, and storage map, see
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
@@ -205,7 +222,7 @@ streams are not supported and are reported as errors.
 ## Install
 
 1. Open the [latest release](https://github.com/AdilSiddiquiHQ/save-and-send/releases/latest)
-   and download `SaveAndSend-v1.2.0-arm64.apk`.
+   and download `SaveAndSend-v1.3.0-arm64.apk`.
 2. Optionally verify the SHA-256 checksum published with the release.
 3. Allow your browser or file manager to install unknown apps, then open the
    APK.
@@ -239,7 +256,7 @@ Copy it to a predictable name before sharing:
 
 ```bash
 cp build/app/outputs/flutter-apk/app-release.apk \
-   SaveAndSend-v1.2.0-arm64.apk
+   SaveAndSend-v1.3.0-arm64.apk
 ```
 
 The repository deliberately keeps only `arm64-v8a`. The Python and FFmpeg

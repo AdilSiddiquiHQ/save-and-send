@@ -104,15 +104,21 @@ sequenceDiagram
 
 ```text
 booting ──► idle ──► preparing ──► downloading ──► result
-   │          │                         │
-   │          └──────── error ◄─────────┘
+   │          │                         │            │
+   │          └──────── error ◄─────────┘            │
+   │                                                 ▼
+   │                              result ◄── transforming
    └──► engineError ──► retrySetup ──► booting
 ```
 
 - `booting` — engine extraction and first-frame warm-up.
 - `idle` — link composer, trust notes, three-step explainer.
 - `preparing` / `downloading` — progress ring, stage copy, cancel action.
-- `result` — inline preview, metadata, Gallery status, share actions.
+- `result` — inline preview, metadata, Gallery status, For Status tools,
+  share actions, and a part list after a split.
+- `transforming` — FFmpeg progress while a Status fit, split, trim, or compress
+  runs. Cancel kills the process. A failed or cancelled transform returns to
+  the result it came from.
 - `error` — localized message, optional native detail, retry and share-link
   actions.
 - `engineError` — startup failure with a retry path.
@@ -131,7 +137,8 @@ A shared link that arrives while a download is running is held in
 | --- | --- | --- |
 | `getInitialShare` | — | `{url?, error?}` |
 | `ensureEngine` | — | `{version, cookies}` |
-| `download` | `url`, `requestId` | `null` |
+| `download` | `url`, `requestId`, `options` | `null` |
+| `transform` | `path`, `title`, `mode`, `requestId`, `startMs`, `endMs`, `targetBytes` | `null` |
 | `cancel` | — | `null` |
 | `shareWhatsApp` | `path` | `ok` / `chat` / `not_installed` / `missing` / `failed` |
 | `shareStatus` | `path` | `ok` / `chat` / `not_installed` / `missing` / `failed` |
@@ -155,7 +162,8 @@ A shared link that arrives while a download is running is held in
 | `stage` | `stage`, optional `attempt` |
 | `progress` | `percent` (0–100), `etaSeconds` |
 | `gallery` | `saved` |
-| `done` | `path`, `title`, `durationMs`, `width`, `height`, `hasAudio`, `thumbnailPath`, `thumbnailUrl`, `trimmed`, `sizeBytes` |
+| `done` | `path`, `title`, `durationMs`, `width`, `height`, `hasAudio`, `thumbnailPath`, `thumbnailUrl`, `trimmed`, `sizeBytes`, `uri`, `savedPath`, `kind` |
+| `transformed` | `items`: one map per output with `path`, `title`, `durationMs`, `width`, `height`, `hasAudio`, `sizeBytes`, `uri`, `savedPath`, `kind` |
 | `error` | `code`, `message`, `detail` |
 | `cancelled` | — |
 
@@ -291,6 +299,7 @@ installers.
 | Location | Contents | Lifetime |
 | --- | --- | --- |
 | `cacheDir/downloads/<requestId>/` | Working video, thumbnail, info JSON | Until the next download or cache eviction |
+| `cacheDir/transforms/<requestId>/` | Status-encoded outputs | Until the next transform or cache eviction |
 | `filesDir/cookies.txt` | Optional Netscape cookie file | Until removed in Settings |
 | `noBackupFilesDir/youtubedl-android/` | Extracted Python, FFmpeg, yt-dlp | App install (not backed up) |
 | `Movies/Save & Send/` | Finished MP4 copies | Until the user deletes them |
@@ -301,11 +310,11 @@ The Gallery copy is independent of the app and survives uninstalling.
 
 ## Concurrency and lifecycle
 
-- One download at a time, enforced by an `AtomicBoolean` in `Downloader` and a
-  second guard in `MainActivity`.
+- One download or Status transform at a time, enforced by the same
+  `AtomicBoolean` in `Downloader` and a second guard in `MainActivity`.
 - Downloads run on a single-thread executor plus a dedicated worker thread.
-- `FLAG_KEEP_SCREEN_ON` is set while a download is active and cleared on
-  `done`, `error`, or `cancelled`.
+- `FLAG_KEEP_SCREEN_ON` is set while a download or transform is active and
+  cleared on `done`, `transformed`, `error`, or `cancelled`.
 - There is no foreground service. If Android kills the activity during a long
   download, the request is cancelled rather than resumed.
 - `PopScope` asks for confirmation before leaving during a download.

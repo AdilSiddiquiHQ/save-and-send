@@ -102,6 +102,8 @@ extension AppStrings on AppLocalizations {
         return optimizing;
       case 'trimming':
         return trimming;
+      case 'transforming':
+        return transforming;
       case 'retrying':
         return retrying;
       case 'saving':

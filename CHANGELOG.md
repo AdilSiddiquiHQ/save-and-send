@@ -6,6 +6,36 @@ All notable changes to Save & Send are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-10-28
+
+### Added
+
+- **For Status tools.** A card on the result screen with four one-tap fixes:
+  - **Fit to Status** pads a landscape or square clip into 1080 × 1920 with a
+    blurred copy of the same frame behind it. Nothing is cropped.
+  - **Split into parts** cuts a long clip into 59.5-second pieces, names them
+    `Title · 1`, `Title · 2`, and lists every part so they can be sent in order.
+  - **Trim** opens a range slider over the whole clip, capped at 59.5 seconds,
+    so a 3-minute video can keep its middle 40 seconds.
+  - **Make smaller** re-encodes to an 8, 16, or 24 MB target with a bitrate
+    budget, retrying once at a lower bitrate if the first pass overshoots.
+- Every Status output is saved to the Gallery on its own, added to Recent with
+  the same thumbnail as the source, and can be shared straight from its part
+  row.
+- Progress for encoding, with the same cancel path as a download.
+
+### Changed
+
+- Recent ids include the output path, so several parts saved in the same
+  millisecond stay separate entries.
+- A failed Status encode returns to the result screen with a short message
+  instead of replacing the finished download with an error page.
+
+### Fixed
+
+- Trim and split keep the original orientation and only touch the duration;
+  the resolution is left alone because the download is already Status-safe.
+
 ## [1.2.0] — 2026-10-28
 
 ### Added

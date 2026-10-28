@@ -43,6 +43,26 @@ class NativeBridge {
     });
   }
 
+  static Future<void> transform({
+    required String requestId,
+    required String path,
+    required String title,
+    required String mode,
+    int startMs = 0,
+    int endMs = 0,
+    int targetBytes = 0,
+  }) {
+    return _methods.invokeMethod<void>('transform', {
+      'requestId': requestId,
+      'path': path,
+      'title': title,
+      'mode': mode,
+      'startMs': startMs,
+      'endMs': endMs,
+      'targetBytes': targetBytes,
+    });
+  }
+
   static Future<LinkProbe?> probe(String url) async {
     final result = await _methods.invokeMapMethod<String, dynamic>(
       'probe',

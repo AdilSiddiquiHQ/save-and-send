@@ -486,4 +486,75 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get diagnosticsRunning => 'جارٍ الفحص…';
+
+  @override
+  String get statusTools => 'للحالة';
+
+  @override
+  String get statusToolsHelp => 'جهّز هذا المقطع للحالة.';
+
+  @override
+  String get fitStatus => 'ضبط للحالة';
+
+  @override
+  String get fitStatusHelp => 'خلفية ضبابية، الفيديو كامل، 9:16.';
+
+  @override
+  String get splitStatus => 'تقسيم إلى أجزاء';
+
+  @override
+  String get splitStatusHelp => 'يقسّمه إلى أجزاء أقل من 60 ثانية.';
+
+  @override
+  String get trimVideo => 'قص';
+
+  @override
+  String get trimVideoHelp => 'احتفظ بالجزء الذي تريده فقط.';
+
+  @override
+  String get compressVideo => 'تصغير الحجم';
+
+  @override
+  String get compressVideoHelp => 'قلّل حجم الملف إلى الحجم الذي تختاره.';
+
+  @override
+  String get trimTitle => 'قص المقطع';
+
+  @override
+  String get trimHelp => 'اسحب المقبضين لاختيار ما يبقى.';
+
+  @override
+  String get trimStart => 'البداية';
+
+  @override
+  String get trimEnd => 'النهاية';
+
+  @override
+  String get compressTitle => 'إلى أي حجم؟';
+
+  @override
+  String get compressHelp => 'ستبقى الصورة واضحة بما يكفي للحالة.';
+
+  @override
+  String get targetSize => 'الحجم';
+
+  @override
+  String get transformDone => 'جاهز للحالة.';
+
+  @override
+  String partsSaved(int count) {
+    return 'تم حفظ الأجزاء في المعرض ($count).';
+  }
+
+  @override
+  String get transformFailed => 'تعذّر تجهيز هذا المقطع. حاول مرة أخرى.';
+
+  @override
+  String get transforming => 'جارٍ التجهيز للحالة…';
+
+  @override
+  String get apply => 'طبّق';
+
+  @override
+  String get parts => 'الأجزاء';
 }

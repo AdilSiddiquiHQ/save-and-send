@@ -123,6 +123,60 @@ void main() {
     expect(probe.audioOption?.label, 'MP3');
   });
 
+  test('a transformed event carries one item per part', () {
+    final event = DownloadEvent.fromMap({
+      'type': 'transformed',
+      'items': [
+        {
+          'path': '/tmp/part1.mp4',
+          'title': 'Clip · 1',
+          'durationMs': 59500,
+          'width': 1080,
+          'height': 1920,
+          'hasAudio': true,
+          'sizeBytes': 5000000,
+          'uri': 'content://media/external/video/media/71',
+          'kind': 'video',
+        },
+        {
+          'path': '/tmp/part2.mp4',
+          'title': 'Clip · 2',
+          'durationMs': 5500,
+          'width': 1080,
+          'height': 1920,
+          'hasAudio': false,
+          'sizeBytes': 500000,
+          'kind': 'video',
+        },
+      ],
+    });
+
+    expect(event.items, hasLength(2));
+    final first = event.items.first.toResult();
+    expect(first.title, 'Clip · 1');
+    expect(first.durationMs, 59500);
+    expect(first.uri, 'content://media/external/video/media/71');
+    expect(first.isAudio, isFalse);
+  });
+
+  test('two parts of one split get different history ids', () {
+    VideoResult part(int index) => VideoResult(
+          path: '/tmp/part$index.mp4',
+          title: 'Clip · $index',
+          durationMs: 59500,
+          width: 1080,
+          height: 1920,
+          hasAudio: true,
+          trimmed: false,
+          sizeBytes: 5000000,
+          uri: 'content://media/external/video/media/$index',
+        );
+
+    final one = HistoryEntry.fromResult(part(1));
+    final two = HistoryEntry.fromResult(part(2));
+    expect(one.id, isNot(two.id));
+  });
+
   test('result keeps the gallery URI and the audio kind', () {
     final event = DownloadEvent.fromMap({
       'type': 'done',

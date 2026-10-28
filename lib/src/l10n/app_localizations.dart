@@ -1022,6 +1022,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Checking…'**
   String get diagnosticsRunning;
+
+  /// No description provided for @statusTools.
+  ///
+  /// In en, this message translates to:
+  /// **'For Status'**
+  String get statusTools;
+
+  /// No description provided for @statusToolsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Make this clip fit a Status.'**
+  String get statusToolsHelp;
+
+  /// No description provided for @fitStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit to Status'**
+  String get fitStatus;
+
+  /// No description provided for @fitStatusHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Blurred background, full picture, 9:16.'**
+  String get fitStatusHelp;
+
+  /// No description provided for @splitStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Split into parts'**
+  String get splitStatus;
+
+  /// No description provided for @splitStatusHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Cuts it into pieces under 60 seconds.'**
+  String get splitStatusHelp;
+
+  /// No description provided for @trimVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Trim'**
+  String get trimVideo;
+
+  /// No description provided for @trimVideoHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep only the part you want.'**
+  String get trimVideoHelp;
+
+  /// No description provided for @compressVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Make smaller'**
+  String get compressVideo;
+
+  /// No description provided for @compressVideoHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Shrink the file to a size you pick.'**
+  String get compressVideoHelp;
+
+  /// No description provided for @trimTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trim the clip'**
+  String get trimTitle;
+
+  /// No description provided for @trimHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the handles to choose what stays.'**
+  String get trimHelp;
+
+  /// No description provided for @trimStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get trimStart;
+
+  /// No description provided for @trimEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get trimEnd;
+
+  /// No description provided for @compressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How small?'**
+  String get compressTitle;
+
+  /// No description provided for @compressHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'The picture stays clear enough for Status.'**
+  String get compressHelp;
+
+  /// No description provided for @targetSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get targetSize;
+
+  /// No description provided for @transformDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for Status.'**
+  String get transformDone;
+
+  /// How many files a split produced.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} parts saved to your Gallery.'**
+  String partsSaved(int count);
+
+  /// No description provided for @transformFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t prepare this clip. Try again.'**
+  String get transformFailed;
+
+  /// No description provided for @transforming.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing for Status…'**
+  String get transforming;
+
+  /// No description provided for @apply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get apply;
+
+  /// No description provided for @parts.
+  ///
+  /// In en, this message translates to:
+  /// **'Parts'**
+  String get parts;
 }
 
 class _AppLocalizationsDelegate

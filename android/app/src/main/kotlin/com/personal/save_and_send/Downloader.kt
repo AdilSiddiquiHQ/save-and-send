@@ -9,6 +9,7 @@ import com.yausername.youtubedl_android.YoutubeDLRequest
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
@@ -27,6 +28,17 @@ class Downloader(
         val maxHeight: Int = 0,
         val audioOnly: Boolean = false,
         val alternate: Boolean = false,
+    )
+
+    /**
+     * What to do to a finished download. [mode] is one of "fit", "split",
+     * "trim", or "compress".
+     */
+    data class TransformOptions(
+        val mode: String,
+        val startMs: Long = 0L,
+        val endMs: Long = 0L,
+        val targetBytes: Long = 0L,
     )
 
     data class ProbeOption(
@@ -187,6 +199,401 @@ class Downloader(
         activeId?.let { YoutubeDL.getInstance().destroyProcessById(it) }
         ffmpegProcess?.destroy()
     }
+
+    /**
+     * Re-encodes an already downloaded file for a Status. Runs on its own
+     * thread, reports progress on the event channel, saves every finished part
+     * to the Gallery, and emits "transformed" with one item per part.
+     */
+    fun transform(
+        requestId: String,
+        path: String,
+        title: String,
+        options: TransformOptions,
+    ) {
+        if (activeId != null || !globalBusy.compareAndSet(false, true)) {
+            emit(
+                mapOf(
+                    "type" to "error",
+                    "requestId" to requestId,
+                    "code" to "busy",
+                    "message" to "Another download is already running.",
+                    "detail" to null,
+                )
+            )
+            return
+        }
+        activeId = requestId
+        cancelled = false
+
+        Thread({
+            try {
+                val source = File(path)
+                if (!source.exists() || source.length() == 0L) {
+                    throw DownloadException(
+                        "storage",
+                        "The downloaded file is no longer available. Download it again.",
+                    )
+                }
+                emit(
+                    mapOf(
+                        "type" to "stage",
+                        "requestId" to requestId,
+                        "stage" to "transforming",
+                    )
+                )
+                val items = runTransform(requestId, source, title, options)
+                if (cancelled) throw YoutubeDL.CanceledException()
+                emit(
+                    mapOf(
+                        "type" to "transformed",
+                        "requestId" to requestId,
+                        "items" to items,
+                    )
+                )
+            } catch (e: YoutubeDL.CanceledException) {
+                emit(mapOf("type" to "cancelled", "requestId" to requestId))
+            } catch (e: DownloadException) {
+                if (cancelled) {
+                    emit(mapOf("type" to "cancelled", "requestId" to requestId))
+                } else {
+                    emit(
+                        mapOf(
+                            "type" to "error",
+                            "requestId" to requestId,
+                            "code" to e.code,
+                            "message" to e.message,
+                            "detail" to e.detail,
+                        )
+                    )
+                }
+            } catch (e: Throwable) {
+                if (cancelled) {
+                    emit(mapOf("type" to "cancelled", "requestId" to requestId))
+                } else {
+                    emit(
+                        mapOf(
+                            "type" to "error",
+                            "requestId" to requestId,
+                            "code" to "processing",
+                            "message" to "Couldn't prepare this clip. Try again.",
+                            "detail" to (e.message ?: e.toString()).takeLast(2000),
+                        )
+                    )
+                }
+            } finally {
+                ffmpegProcess = null
+                activeId = null
+                globalBusy.set(false)
+            }
+        }, "save-and-send-transform").start()
+    }
+
+    private fun runTransform(
+        requestId: String,
+        source: File,
+        title: String,
+        options: TransformOptions,
+    ): List<Map<String, Any?>> {
+        val root = File(context.cacheDir, "transforms")
+        // A second Status action can run on a file from an earlier transform,
+        // so never delete the folder that holds the input.
+        val sourceDir = source.parentFile?.absolutePath
+        root.listFiles()
+            ?.filter { it.isDirectory && it.name != requestId }
+            ?.filter { it.absolutePath != sourceDir }
+            ?.forEach { old -> runCatching { old.deleteRecursively() } }
+
+        val workDir = File(root, requestId)
+        if (workDir.absolutePath != sourceDir) workDir.deleteRecursively()
+        if (!workDir.mkdirs() && !workDir.isDirectory) {
+            throw DownloadException("storage", "Couldn't create a temporary folder.")
+        }
+
+        val info = inspect(source)
+        if (info.durationMs <= 0L) {
+            throw DownloadException("processing", "This file can't be read.")
+        }
+
+        val outputs = when (options.mode) {
+            "fit" -> listOf(encodeFit(requestId, source, workDir, title, info))
+            "split" -> encodeParts(requestId, source, workDir, title, info)
+            "trim" -> listOf(encodeTrim(requestId, source, workDir, title, info, options))
+            "compress" -> listOf(
+                encodeCompressed(requestId, source, workDir, title, info, options)
+            )
+            else -> throw DownloadException("processing", "Unknown action.")
+        }
+        if (cancelled) throw YoutubeDL.CanceledException()
+
+        val items = mutableListOf<Map<String, Any?>>()
+        outputs.forEach { file ->
+            if (cancelled) throw YoutubeDL.CanceledException()
+            emit(
+                mapOf(
+                    "type" to "stage",
+                    "requestId" to requestId,
+                    "stage" to "saving",
+                )
+            )
+            val outInfo = inspect(file)
+            val partTitle = file.nameWithoutExtension
+            val saved = runCatching {
+                saveToGallery(file, partTitle, false)
+            }.getOrDefault(emptyMap())
+            items += mapOf(
+                "path" to file.absolutePath,
+                "title" to partTitle,
+                "durationMs" to outInfo.durationMs,
+                "width" to outInfo.displayWidth,
+                "height" to outInfo.displayHeight,
+                "hasAudio" to outInfo.hasAudio,
+                "sizeBytes" to file.length(),
+                "uri" to saved["uri"],
+                "savedPath" to saved["path"],
+                "kind" to "video",
+            )
+        }
+        return items
+    }
+
+    private fun encodeFit(
+        requestId: String,
+        source: File,
+        workDir: File,
+        title: String,
+        info: Inspected,
+    ): File {
+        // A blurred zoom of the same frame fills the 9:16 canvas; the untouched
+        // picture sits on top. Nothing is cropped.
+        val filter = "[0:v]split=2[bgs][fgs];" +
+            "[bgs]scale=270:480:force_original_aspect_ratio=increase," +
+            "crop=270:480,boxblur=8:2,scale=1080:1920[bg];" +
+            "[fgs]scale=1080:1920:force_original_aspect_ratio=decrease," +
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2[fg];" +
+            "[bg][fg]overlay=(W-w)/2:(H-h)/2,format=yuv420p[v]"
+        val raw = File(workDir, "fit.mp4")
+        encode(
+            requestId = requestId,
+            input = source,
+            output = raw,
+            info = info,
+            durationMs = info.durationMs,
+            filter = filter,
+            progressBase = 0.0,
+            progressSpan = 1.0,
+        )
+        return renameWithin(workDir, raw, title, "mp4")
+    }
+
+    private fun encodeParts(
+        requestId: String,
+        source: File,
+        workDir: File,
+        title: String,
+        info: Inspected,
+    ): List<File> {
+        val partMs = 59_500L
+        val count = ((info.durationMs + partMs - 1) / partMs).toInt().coerceAtLeast(1)
+        val outputs = mutableListOf<File>()
+        for (index in 0 until count) {
+            if (cancelled) throw YoutubeDL.CanceledException()
+            val start = index * partMs
+            val duration = minOf(partMs, info.durationMs - start)
+            if (duration <= 0L) break
+            val raw = File(workDir, "part_${index + 1}.mp4")
+            encode(
+                requestId = requestId,
+                input = source,
+                output = raw,
+                info = info,
+                startMs = start,
+                durationMs = duration,
+                progressBase = index.toDouble() / count,
+                progressSpan = 1.0 / count,
+            )
+            val name = if (count > 1) "$title · ${index + 1}" else title
+            outputs += renameWithin(workDir, raw, name, "mp4")
+        }
+        return outputs
+    }
+
+    private fun encodeTrim(
+        requestId: String,
+        source: File,
+        workDir: File,
+        title: String,
+        info: Inspected,
+        options: TransformOptions,
+    ): File {
+        val start = options.startMs.coerceIn(0L, info.durationMs)
+        val end = if (options.endMs > start) options.endMs else info.durationMs
+        val duration = (end.coerceAtMost(info.durationMs) - start).coerceAtLeast(0L)
+        if (duration < 500L) {
+            throw DownloadException("processing", "That part is too short.")
+        }
+        val raw = File(workDir, "trim.mp4")
+        encode(
+            requestId = requestId,
+            input = source,
+            output = raw,
+            info = info,
+            startMs = start,
+            durationMs = duration,
+            progressBase = 0.0,
+            progressSpan = 1.0,
+        )
+        return renameWithin(workDir, raw, title, "mp4")
+    }
+
+    private fun encodeCompressed(
+        requestId: String,
+        source: File,
+        workDir: File,
+        title: String,
+        info: Inspected,
+        options: TransformOptions,
+    ): File {
+        if (options.targetBytes <= 0L) {
+            throw DownloadException("processing", "No target size was given.")
+        }
+        val seconds = info.durationMs / 1000.0
+        if (seconds <= 0.0) throw DownloadException("processing", "This file can't be read.")
+
+        val totalKbps = (options.targetBytes * 8.0 / seconds / 1000.0).toInt()
+        val audioKbps = if (info.hasAudio) 96 else 0
+        var videoKbps = (totalKbps - audioKbps).coerceIn(220, 6000)
+        val allowance = (options.targetBytes * 1.04).toLong()
+
+        var attempt = 0
+        while (true) {
+            if (cancelled) throw YoutubeDL.CanceledException()
+            val raw = File(workDir, "small_$attempt.mp4")
+            encode(
+                requestId = requestId,
+                input = source,
+                output = raw,
+                info = info,
+                durationMs = info.durationMs,
+                videoKbps = videoKbps,
+                progressBase = attempt * 0.5,
+                progressSpan = 0.5,
+            )
+            if (raw.length() <= allowance || videoKbps <= 260 || attempt >= 1) {
+                return renameWithin(workDir, raw, title, "mp4")
+            }
+            runCatching { raw.delete() }
+            attempt += 1
+            videoKbps = (videoKbps * 0.78).toInt().coerceAtLeast(220)
+        }
+    }
+
+    /** Shared H.264/AAC encode, with optional fast seek, trim, and filter. */
+    private fun encode(
+        requestId: String,
+        input: File,
+        output: File,
+        info: Inspected,
+        startMs: Long? = null,
+        durationMs: Long? = null,
+        filter: String? = null,
+        videoKbps: Int? = null,
+        progressBase: Double = 0.0,
+        progressSpan: Double = 1.0,
+    ) {
+        val ffmpeg = ffmpegBinary()
+            ?: throw IOException("FFmpeg is missing from the installation.")
+
+        val command = mutableListOf(
+            ffmpeg.absolutePath,
+            "-y",
+            "-nostdin",
+            "-hide_banner",
+            "-loglevel", "error",
+            "-progress", "pipe:1",
+            "-nostats",
+        )
+        if (startMs != null && startMs > 0L) {
+            command += listOf("-ss", seconds(startMs))
+        }
+        command += listOf("-i", input.absolutePath)
+        if (durationMs != null) {
+            command += listOf("-t", seconds(durationMs))
+        }
+        if (filter != null) {
+            command += listOf(
+                "-filter_complex", filter,
+                "-map", "[v]",
+                "-map", "0:a:0?",
+            )
+        } else {
+            command += listOf("-map", "0:v:0", "-map", "0:a:0?")
+        }
+
+        if (videoKbps == null) {
+            command += listOf(
+                "-c:v", "libx264",
+                "-preset", "veryfast",
+                "-crf", "23",
+                "-pix_fmt", "yuv420p",
+            )
+        } else {
+            command += listOf(
+                "-c:v", "libx264",
+                "-preset", "veryfast",
+                "-b:v", "${videoKbps}k",
+                "-maxrate", "${videoKbps * 11 / 10}k",
+                "-bufsize", "${videoKbps * 2}k",
+                "-pix_fmt", "yuv420p",
+            )
+        }
+        if (info.hasAudio) {
+            command += listOf(
+                "-c:a", "aac",
+                "-b:a", if (videoKbps == null) "128k" else "96k",
+                "-ac", "2",
+            )
+        }
+        command += listOf("-movflags", "+faststart", output.absolutePath)
+
+        val log = StringBuilder()
+        val progressDuration = durationMs ?: info.durationMs
+        val ok = runFfmpegCommand(
+            command,
+            log,
+            transformProgress(requestId, progressDuration, progressBase, progressSpan),
+        )
+        if (cancelled) throw YoutubeDL.CanceledException()
+        if (!ok || !output.exists() || output.length() == 0L) {
+            throw IOException("FFmpeg failed: ${log.toString().takeLast(1200)}")
+        }
+    }
+
+    private fun transformProgress(
+        requestId: String,
+        durationMs: Long,
+        base: Double,
+        span: Double,
+    ): (String) -> Unit {
+        val totalMs = max(1L, durationMs).toDouble()
+        return { line ->
+            if (line.startsWith("out_time_ms=")) {
+                val micros = line.substringAfter('=').trim().toLongOrNull() ?: 0L
+                val fraction = (micros / 1000.0 / totalMs).coerceIn(0.0, 1.0)
+                emit(
+                    mapOf(
+                        "type" to "progress",
+                        "requestId" to requestId,
+                        "percent" to ((base + span * fraction) * 100.0),
+                        "etaSeconds" to -1,
+                    )
+                )
+            }
+        }
+    }
+
+    private fun seconds(ms: Long): String =
+        String.format(Locale.US, "%.3f", ms / 1000.0)
 
     private fun run(requestId: String, url: String, options: Options): Result {
         // The gallery has the saved copy, so old preview/share files are no
@@ -952,7 +1359,11 @@ class Downloader(
      * Runs FFmpeg and collects its output. Returns true on a clean exit.
      * The process is exposed through [ffmpegProcess] so cancel() can kill it.
      */
-    private fun runFfmpegCommand(command: List<String>, outputText: StringBuilder): Boolean {
+    private fun runFfmpegCommand(
+        command: List<String>,
+        outputText: StringBuilder,
+        onLine: ((String) -> Unit)? = null,
+    ): Boolean {
         NativeLibraryHelper.fixDependencies(context)
 
         val processBuilder = ProcessBuilder(command)
@@ -968,7 +1379,10 @@ class Downloader(
         val reader = Thread {
             runCatching {
                 process.inputStream.bufferedReader().useLines { lines ->
-                    lines.forEach { outputText.appendLine(it) }
+                    lines.forEach { line ->
+                        outputText.appendLine(line)
+                        onLine?.invoke(line)
+                    }
                 }
             }
         }

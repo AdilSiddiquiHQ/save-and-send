@@ -488,4 +488,75 @@ class AppLocalizationsBn extends AppLocalizations {
 
   @override
   String get diagnosticsRunning => 'দেখা হচ্ছে…';
+
+  @override
+  String get statusTools => 'স্ট্যাটাসের জন্য';
+
+  @override
+  String get statusToolsHelp => 'ক্লিপটা স্ট্যাটাসের জন্য তৈরি করুন।';
+
+  @override
+  String get fitStatus => 'স্ট্যাটাসে ফিট করুন';
+
+  @override
+  String get fitStatusHelp => 'ঝাপসা ব্যাকগ্রাউন্ড, পুরো ভিডিও, 9:16।';
+
+  @override
+  String get splitStatus => 'ভাগে ভাগ করুন';
+
+  @override
+  String get splitStatusHelp => '60 সেকেন্ডের ছোট ছোট ভাগ হয়ে যাবে।';
+
+  @override
+  String get trimVideo => 'কাটুন';
+
+  @override
+  String get trimVideoHelp => 'যে অংশটা রাখতে চান শুধু সেটাই রাখুন।';
+
+  @override
+  String get compressVideo => 'সাইজ কমান';
+
+  @override
+  String get compressVideoHelp => 'ফাইলটা পছন্দের সাইজে ছোট করুন।';
+
+  @override
+  String get trimTitle => 'ক্লিপ কাটুন';
+
+  @override
+  String get trimHelp => 'যে অংশটা রাখবেন, হ্যান্ডেল টেনে বেছে নিন।';
+
+  @override
+  String get trimStart => 'শুরু';
+
+  @override
+  String get trimEnd => 'শেষ';
+
+  @override
+  String get compressTitle => 'কত ছোট?';
+
+  @override
+  String get compressHelp => 'ছবি স্ট্যাটাসের জন্য যথেষ্ট পরিষ্কার থাকবে।';
+
+  @override
+  String get targetSize => 'সাইজ';
+
+  @override
+  String get transformDone => 'স্ট্যাটাসের জন্য তৈরি।';
+
+  @override
+  String partsSaved(int count) {
+    return 'গ্যালারিতে $countটা ভাগ সেভ হয়েছে।';
+  }
+
+  @override
+  String get transformFailed => 'ক্লিপটা তৈরি করা গেল না। আবার চেষ্টা করুন।';
+
+  @override
+  String get transforming => 'স্ট্যাটাসের জন্য তৈরি হচ্ছে…';
+
+  @override
+  String get apply => 'করুন';
+
+  @override
+  String get parts => 'ভাগগুলো';
 }

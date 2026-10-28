@@ -24,6 +24,7 @@ class DownloadEvent {
     this.code,
     this.url,
     this.error,
+    this.items = const [],
   });
 
   final String type;
@@ -50,6 +51,9 @@ class DownloadEvent {
   final String? code;
   final String? url;
   final String? error;
+
+  /// The finished parts of a Status transform. Empty for every other event.
+  final List<TransformItem> items;
 
   factory DownloadEvent.fromMap(Map<dynamic, dynamic> map) {
     int? asInt(dynamic value) {
@@ -92,6 +96,72 @@ class DownloadEvent {
       code: asString(map['code']),
       url: asString(map['url']),
       error: asString(map['error']),
+      items: ((map['items'] as List?) ?? const [])
+          .whereType<Map>()
+          .map(TransformItem.fromMap)
+          .toList(growable: false),
+    );
+  }
+}
+
+/// One finished file from a "For Status" action.
+class TransformItem {
+  const TransformItem({
+    required this.path,
+    required this.title,
+    required this.durationMs,
+    required this.width,
+    required this.height,
+    required this.hasAudio,
+    required this.sizeBytes,
+    this.uri,
+    this.savedPath,
+    this.kind = 'video',
+  });
+
+  final String path;
+  final String title;
+  final int durationMs;
+  final int width;
+  final int height;
+  final bool hasAudio;
+  final int sizeBytes;
+  final String? uri;
+  final String? savedPath;
+  final String kind;
+
+  factory TransformItem.fromMap(Map<dynamic, dynamic> map) {
+    return TransformItem(
+      path: (map['path'] as String?) ?? '',
+      title: ((map['title'] as String?) ?? '').trim().isEmpty
+          ? 'Video'
+          : (map['title'] as String).trim(),
+      durationMs: (map['durationMs'] as num?)?.toInt() ?? 0,
+      width: (map['width'] as num?)?.toInt() ?? 0,
+      height: (map['height'] as num?)?.toInt() ?? 0,
+      hasAudio: map['hasAudio'] == true,
+      sizeBytes: (map['sizeBytes'] as num?)?.toInt() ?? 0,
+      uri: map['uri'] as String?,
+      savedPath: map['savedPath'] as String?,
+      kind: (map['kind'] as String?) ?? 'video',
+    );
+  }
+
+  VideoResult toResult({String? thumbnailPath, String? thumbnailUrl}) {
+    return VideoResult(
+      path: path,
+      title: title,
+      durationMs: durationMs,
+      width: width,
+      height: height,
+      hasAudio: hasAudio,
+      trimmed: false,
+      sizeBytes: sizeBytes,
+      thumbnailPath: thumbnailPath,
+      thumbnailUrl: thumbnailUrl,
+      uri: uri,
+      savedPath: savedPath,
+      kind: kind,
     );
   }
 }

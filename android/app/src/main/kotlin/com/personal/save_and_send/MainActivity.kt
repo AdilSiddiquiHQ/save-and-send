@@ -138,6 +138,48 @@ class MainActivity : FlutterActivity() {
                         }
                     }
 
+                    "transform" -> {
+                        val requestId = call.argument<String>("requestId")
+                        val path = call.argument<String>("path")
+                        val mode = call.argument<String>("mode")
+                        if (requestId.isNullOrBlank() || path.isNullOrBlank() || mode.isNullOrBlank()) {
+                            result.error("BAD_ARGS", "A file, mode, and request ID are required.", null)
+                        } else if (downloader.isBusy()) {
+                            result.error("BUSY", "Another download is already running.", null)
+                        } else {
+                            io.execute {
+                                try {
+                                    ensureEngineReady()
+                                    downloader.transform(
+                                        requestId,
+                                        path,
+                                        call.argument<String>("title")
+                                            ?.takeIf { it.isNotBlank() }
+                                            ?: File(path).nameWithoutExtension,
+                                        Downloader.TransformOptions(
+                                            mode = mode,
+                                            startMs = (call.argument<Any>("startMs") as? Number)
+                                                ?.toLong() ?: 0L,
+                                            endMs = (call.argument<Any>("endMs") as? Number)
+                                                ?.toLong() ?: 0L,
+                                            targetBytes = (call.argument<Any>("targetBytes") as? Number)
+                                                ?.toLong() ?: 0L,
+                                        ),
+                                    )
+                                    mainHandler.post { result.success(null) }
+                                } catch (e: Exception) {
+                                    mainHandler.post {
+                                        result.error(
+                                            "ENGINE",
+                                            e.message ?: "Couldn't prepare this clip.",
+                                            e.stackTraceToString().takeLast(1000),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     "cancel" -> {
                         downloader.cancel()
                         result.success(null)

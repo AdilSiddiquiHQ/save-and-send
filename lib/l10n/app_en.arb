@@ -217,5 +217,36 @@
   "diagnosticsCopy": "Copy report",
   "diagnosticsCopied": "Report copied.",
   "diagnosticsNoLink": "Paste a link first.",
-  "diagnosticsRunning": "Checking…"
+  "diagnosticsRunning": "Checking…",
+  "statusTools": "For Status",
+  "statusToolsHelp": "Make this clip fit a Status.",
+  "fitStatus": "Fit to Status",
+  "fitStatusHelp": "Blurred background, full picture, 9:16.",
+  "splitStatus": "Split into parts",
+  "splitStatusHelp": "Cuts it into pieces under 60 seconds.",
+  "trimVideo": "Trim",
+  "trimVideoHelp": "Keep only the part you want.",
+  "compressVideo": "Make smaller",
+  "compressVideoHelp": "Shrink the file to a size you pick.",
+  "trimTitle": "Trim the clip",
+  "trimHelp": "Drag the handles to choose what stays.",
+  "trimStart": "Start",
+  "trimEnd": "End",
+  "compressTitle": "How small?",
+  "compressHelp": "The picture stays clear enough for Status.",
+  "targetSize": "Target",
+  "transformDone": "Ready for Status.",
+  "partsSaved": "{count} parts saved to your Gallery.",
+  "@partsSaved": {
+    "description": "How many files a split produced.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "transformFailed": "Couldn't prepare this clip. Try again.",
+  "transforming": "Preparing for Status…",
+  "apply": "Apply",
+  "parts": "Parts"
 }

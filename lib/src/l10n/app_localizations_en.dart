@@ -488,4 +488,75 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get diagnosticsRunning => 'Checking…';
+
+  @override
+  String get statusTools => 'For Status';
+
+  @override
+  String get statusToolsHelp => 'Make this clip fit a Status.';
+
+  @override
+  String get fitStatus => 'Fit to Status';
+
+  @override
+  String get fitStatusHelp => 'Blurred background, full picture, 9:16.';
+
+  @override
+  String get splitStatus => 'Split into parts';
+
+  @override
+  String get splitStatusHelp => 'Cuts it into pieces under 60 seconds.';
+
+  @override
+  String get trimVideo => 'Trim';
+
+  @override
+  String get trimVideoHelp => 'Keep only the part you want.';
+
+  @override
+  String get compressVideo => 'Make smaller';
+
+  @override
+  String get compressVideoHelp => 'Shrink the file to a size you pick.';
+
+  @override
+  String get trimTitle => 'Trim the clip';
+
+  @override
+  String get trimHelp => 'Drag the handles to choose what stays.';
+
+  @override
+  String get trimStart => 'Start';
+
+  @override
+  String get trimEnd => 'End';
+
+  @override
+  String get compressTitle => 'How small?';
+
+  @override
+  String get compressHelp => 'The picture stays clear enough for Status.';
+
+  @override
+  String get targetSize => 'Target';
+
+  @override
+  String get transformDone => 'Ready for Status.';
+
+  @override
+  String partsSaved(int count) {
+    return '$count parts saved to your Gallery.';
+  }
+
+  @override
+  String get transformFailed => 'Couldn\'t prepare this clip. Try again.';
+
+  @override
+  String get transforming => 'Preparing for Status…';
+
+  @override
+  String get apply => 'Apply';
+
+  @override
+  String get parts => 'Parts';
 }
