@@ -51,7 +51,7 @@ download engine runs entirely on the phone.
 | **Package** | `com.personal.save_and_send` |
 | **Version** | 1.0.0 (1) |
 | **Devices** | Android 7.0+ (API 24), `arm64-v8a` |
-| **Output** | MP4 / H.264 / AAC-LC, up to 1080p, ≤ 59.5 s |
+| **Output** | MP4 / H.264 / AAC-LC, ≤ 1920 px long edge, ≤ 59.5 s |
 | **Interface** | English and Urdu, Material 3, RTL-aware |
 | **Storage** | `Movies/Save & Send/` plus app-private cache |
 | **Backend** | None |
@@ -112,7 +112,7 @@ flowchart LR
     A["Share a link<br/>or paste one"] --> B["yt-dlp<br/>picks best H.264/AAC"]
     B --> C{"Already<br/>compatible?"}
     C -- "Yes" --> D["Remux<br/>+faststart"]
-    C -- "No" --> E["FFmpeg<br/>H.264 + AAC<br/>1080p cap<br/>59.5s trim"]
+    C -- "No" --> E["FFmpeg<br/>H.264 + AAC<br/>1080p downscale<br/>59.5s trim"]
     D --> F["Save to Gallery<br/>Movies/Save & Send"]
     E --> F
     F --> G["WhatsApp<br/>Status<br/>Any app"]
@@ -317,8 +317,7 @@ Additional boundaries:
   per-intent read permission. There is no public file server.
 - The app requests only `INTERNET` and, on Android 7–9,
   `WRITE_EXTERNAL_STORAGE`.
-- No ads, trackers, crash reporters, or third-party SDKs beyond the media
-  runtime.
+- No ads, trackers, crash reporters, or analytics SDKs.
 - The downloader talks directly to the source platform. Updating yt-dlp contacts
   the update endpoint configured by youtubedl-android.
 
