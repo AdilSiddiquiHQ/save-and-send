@@ -6,8 +6,8 @@
 
 <p><strong>Save any video. Send it in one tap.</strong></p>
 
-<p>A private, on-device Android app that turns a shared Instagram, Facebook,<br/>
-YouTube, or TikTok link into a WhatsApp-ready MP4.</p>
+<p>A private, on-device Android app that turns a shared Instagram, Facebook, YouTube,<br/>
+or TikTok link into a WhatsApp-ready MP4.</p>
 
 <p>
   <img alt="Android 7.0+" src="https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white" />
