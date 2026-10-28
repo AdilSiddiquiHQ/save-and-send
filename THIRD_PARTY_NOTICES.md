@@ -41,17 +41,21 @@ license texts are included next to the fonts in `assets/fonts/`.
 | [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) | OFL-1.1 | https://github.com/tokotype/PlusJakartaSans | `assets/fonts/OFL-PlusJakartaSans.txt` |
 | [Noto Sans Arabic](https://fonts.google.com/noto/specimen/Noto+Sans+Arabic) | OFL-1.1 | https://github.com/notofonts/arabic | `assets/fonts/OFL-NotoSansArabic.txt` |
 
-## GPL-3.0 and source availability
+## GPL-3.0 components and source availability
 
 Save & Send links against and redistributes GPL-3.0 components
-(youtubedl-android and its FFmpeg build). The application as a whole is
-therefore distributed under GPL-3.0; see [`LICENSE`](LICENSE).
+(youtubedl-android and its FFmpeg build). Those components keep their licenses,
+and a distributed APK carries the GPL-3.0 obligations for them, including the
+source offer. The original application code is source-available under the
+[Save & Send Personal Use License](LICENSE), which adds no restriction on the
+rights the GPL grants for those components.
 
 This repository is the corresponding source for the application code. The
 third-party components are used as published upstream at the versions listed
 above, without private modifications. If you redistribute a built APK, keep
 this notice, the GPL license, and the source links with it, and comply with the
-GPL's source-offer requirements for the bundled components.
+GPL's source-offer requirements for the bundled components. You still may not
+use the project's name, icon, or package name for that copy.
 
 ## Downloaded media
 

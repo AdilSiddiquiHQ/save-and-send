@@ -53,5 +53,6 @@ docs: explain first-run extraction
 
 ## License
 
-By contributing, you agree that your contribution is licensed under
-GPL-3.0, the same license as the project.
+By contributing, you agree that your contribution is licensed to the project
+under the [Save & Send Personal Use License](LICENSE), and you grant the author
+the right to relicense it as part of the project. You keep your copyright.

@@ -14,7 +14,7 @@ or TikTok link into a WhatsApp-ready MP4.</p>
   <img alt="Flutter 3.44" src="https://img.shields.io/badge/Flutter-3.44-02569B?style=flat-square&logo=flutter&logoColor=white" />
   <img alt="arm64-v8a" src="https://img.shields.io/badge/ABI-arm64--v8a-0F6E47?style=flat-square" />
   <img alt="yt-dlp 2026.10.21" src="https://img.shields.io/badge/yt--dlp-2026.10.21-FF0000?style=flat-square&logo=youtube&logoColor=white" />
-  <img alt="GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-0F6E47?style=flat-square" />
+  <img alt="Personal use" src="https://img.shields.io/badge/License-Personal_use-0F6E47?style=flat-square" />
   <a href="https://github.com/AdilSiddiquiHQ/save-and-send/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/AdilSiddiquiHQ/save-and-send/actions/workflows/ci.yml/badge.svg" /></a>
 </p>
 
@@ -508,13 +508,36 @@ license does not grant rights to downloaded content.
 
 ## License
 
-Save & Send is released under the **GNU General Public License v3.0**. See
-[`LICENSE`](LICENSE).
+Save & Send is **source-available, personal use only**. The original code, the
+interface text, the translations, the icon, the screenshots, and the
+documentation are covered by the [Save & Send Personal Use
+License](LICENSE).
 
-The app links against and redistributes GPL-3.0 components — youtubedl-android
-and its FFmpeg build — so the combined application is distributed under the same
-license. Third-party attributions, versions, and source links are listed in
+In short: install it on your own devices, read it, and change it for yourself.
+Do not redistribute it, publish it to any app store, or sell it. The name,
+icon, and package name belong to the project.
+
+Official builds come from this repository's releases page only. There is no
+Play Store listing, and nobody else is authorised to publish one.
+
+### Bundled GPL components
+
+The APK includes GPL-3.0 libraries — youtubedl-android and its FFmpeg build.
+Those components keep their own licenses, and a distributed APK carries the
+GPL's obligations for them, including source availability. The personal-use
+terms above add no restriction on the rights the GPL gives you for those parts;
+they apply to the original code and to any build without them. The exact
+components, versions, and links are in
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+In practice this means a license cannot stop someone who already has the APK
+from copying it, because the bundled GPL parts allow that. What the license and
+the branding do give you is a clear basis to report an impostor listing and to
+ask a store to take it down.
+
+Releases up to and including 1.3.0 were published under GPL-3.0 and remain
+available under that license. The personal-use license applies to the source
+from this commit onward.
 
 ## Acknowledgements
 
