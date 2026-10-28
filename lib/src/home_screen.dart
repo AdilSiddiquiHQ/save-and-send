@@ -7,6 +7,7 @@ import 'package:lucide_icons_lite/lucide_icons_lite.dart';
 import 'package:video_player/video_player.dart';
 
 import 'design.dart';
+import 'history.dart';
 import 'i18n.dart';
 import 'models.dart';
 import 'native.dart';
@@ -66,6 +67,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _videoPaused = false;
   bool _muted = false;
 
+  // Link details read before downloading.
+  LinkProbe? _probe;
+  bool _probing = false;
+  String? _probedUrl;
+  int _maxHeight = 0;
+  bool _audioOnly = false;
+  Timer? _probeDebounce;
+
+  // A link already sitting on the clipboard.
+  String? _clipboardUrl;
+  String? _dismissedClip;
+
+  bool _wifiOnly = false;
+  List<HistoryEntry> _history = const [];
+
   AppLocalizations get s => widget.strings;
   bool get _busy => _phase == Phase.preparing || _phase == Phase.downloading;
 
@@ -74,13 +90,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _events = NativeBridge.events.listen(_onEvent);
+    _urlController.addListener(_scheduleProbe);
     _bootstrap();
+    _loadLocalState();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _events?.cancel();
+    _probeDebounce?.cancel();
+    _urlController.removeListener(_scheduleProbe);
     _urlController.dispose();
     _urlFocus.dispose();
     _video?.dispose();
@@ -93,7 +113,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) return;
+    if (state == AppLifecycleState.resumed) {
+      // The user may have copied a new link in another app.
+      if (_phase == Phase.idle) unawaited(_readClipboard());
+      return;
+    }
     final controller = _video;
     if (controller != null && controller.value.isPlaying) {
       unawaited(controller.pause());
@@ -108,6 +132,104 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // ---------------------------------------------------------------------
   // Startup
   // ---------------------------------------------------------------------
+
+  Future<void> _loadLocalState() async {
+    try {
+      _wifiOnly = (await NativeBridge.getPref('wifi_only')) == '1';
+    } catch (_) {
+      // Defaults to off.
+    }
+    await _loadHistory();
+    await _readClipboard();
+  }
+
+  Future<void> _loadHistory() async {
+    final items = await HistoryStore.load();
+    if (mounted) setState(() => _history = items);
+  }
+
+  /// Offers a link that is already on the clipboard. It never downloads on its
+  /// own; the user still taps.
+  Future<void> _readClipboard() async {
+    if (_clipboardUrl != null) return;
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final url = _extractUrl(data?.text ?? '');
+      if (url == null) return;
+      if (_urlController.text.trim().isNotEmpty) return;
+      if (url == _lastUrl || url == _dismissedClip) return;
+      if (mounted) setState(() => _clipboardUrl = url);
+    } catch (_) {
+      // Clipboard access can be denied by the system.
+    }
+  }
+
+  void _useClipboard() {
+    final url = _clipboardUrl;
+    if (url == null) return;
+    setState(() {
+      _clipboardUrl = null;
+      _dismissedClip = null;
+    });
+    _urlController.text = url;
+    setState(() => _inputError = false);
+  }
+
+  void _scheduleProbe() {
+    _probeDebounce?.cancel();
+    final text = _urlController.text.trim();
+    if (text.isEmpty) {
+      if (_probe != null || _probing) {
+        setState(() {
+          _probe = null;
+          _probing = false;
+          _probedUrl = null;
+          _maxHeight = 0;
+          _audioOnly = false;
+        });
+      }
+      return;
+    }
+    if (_busy || text == _probedUrl) return;
+    _probeDebounce = Timer(
+      const Duration(milliseconds: 900),
+      () => _probeLink(text),
+    );
+  }
+
+  /// Reads duration and per-quality sizes without downloading anything.
+  Future<void> _probeLink(String text) async {
+    if (_probing || _busy) return;
+    final url = _extractUrl(text);
+    if (url == null || !_engineReady) return;
+    setState(() => _probing = true);
+    try {
+      final probe = await NativeBridge.probe(url);
+      if (!mounted) return;
+      if (_urlController.text.trim() != text) return;
+      if (probe == null) {
+        setState(() => _probing = false);
+        return;
+      }
+      final videos = probe.videoOptions;
+      final hasVideo = probe.options.any((option) => !option.audio);
+      setState(() {
+        _probe = probe;
+        _probing = false;
+        _probedUrl = text;
+        if (hasVideo) {
+          _audioOnly = false;
+          _maxHeight = videos.isNotEmpty ? videos.first.height : 0;
+        } else if (probe.audioOption != null) {
+          _audioOnly = true;
+          _maxHeight = 0;
+        }
+      });
+    } catch (_) {
+      // The download still works without the extra details.
+      if (mounted) setState(() => _probing = false);
+    }
+  }
 
   Future<void> _bootstrap() async {
     String? sharedUrl;
@@ -277,7 +399,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _muted = false;
     });
     _screen(false);
-    await _startVideo(result);
+    unawaited(HapticFeedback.mediumImpact());
+    if (result.uri != null) {
+      unawaited(
+        HistoryStore.add(HistoryEntry.fromResult(result)).then((_) {
+          _loadHistory();
+        }),
+      );
+    }
+    if (!result.isAudio) {
+      await _startVideo(result);
+    }
     if (_pendingUrl != null) {
       _pendingUrl = null;
     }
@@ -294,6 +426,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _showDetails = false;
     });
     _screen(false);
+    unawaited(HapticFeedback.heavyImpact());
   }
 
   void _onCancelled() {
@@ -312,7 +445,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // Download
   // ---------------------------------------------------------------------
 
-  Future<void> _startDownload(String rawUrl) async {
+  Future<void> _startDownload(String rawUrl, {bool alternate = false}) async {
     if (_starting) return;
     final url = _extractUrl(rawUrl);
     if (url == null) {
@@ -322,6 +455,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _errorDetail = null;
         _lastUrl = null;
       });
+      return;
+    }
+
+    if (_wifiOnly && !await _isOnWifi()) {
+      _snack(s.wifiNeeded);
       return;
     }
 
@@ -357,7 +495,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       try {
         _screen(true);
-        await NativeBridge.download(url: url, requestId: requestId);
+        await NativeBridge.download(
+          url: url,
+          requestId: requestId,
+          maxHeight: _audioOnly ? 0 : _maxHeight,
+          audioOnly: _audioOnly,
+          alternate: alternate,
+        );
       } on PlatformException catch (e) {
         if (!mounted) return;
         setState(() {
@@ -378,6 +522,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } finally {
       _starting = false;
     }
+  }
+
+  Future<bool> _isOnWifi() async {
+    try {
+      return await NativeBridge.isOnWifi();
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> _lastUrlAgain() async {
+    final url = _lastUrl;
+    if (url == null) return;
+    await _startDownload(url, alternate: true);
   }
 
   Future<void> _cancelDownload() async {
@@ -565,7 +723,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _urlFocus.requestFocus();
       return;
     }
-    setState(() => _inputError = false);
+    setState(() {
+      _inputError = false;
+      _clipboardUrl = null;
+    });
     _startDownload(url);
   }
 
@@ -573,7 +734,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final result = _result;
     if (result == null) return;
     try {
-      final response = await NativeBridge.shareWhatsApp(result.path);
+      final uri = result.uri;
+      final response = uri != null
+          ? await NativeBridge.shareWhatsAppUri(uri, _mimeFor(result))
+          : await NativeBridge.shareWhatsApp(result.path);
       if (!mounted) return;
       if (response == 'not_installed') {
         _snack(s.whatsappMissing);
@@ -589,7 +753,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final result = _result;
     if (result == null) return;
     try {
-      final response = await NativeBridge.shareStatus(result.path);
+      final uri = result.uri;
+      final response = uri != null
+          ? await NativeBridge.shareStatusUri(uri, _mimeFor(result))
+          : await NativeBridge.shareStatus(result.path);
       if (!mounted) return;
       if (response == 'chat') {
         _snack(s.statusFallback);
@@ -607,7 +774,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final result = _result;
     if (result == null) return;
     try {
-      final response = await NativeBridge.shareSystem(result.path);
+      final uri = result.uri;
+      final response = uri != null
+          ? await NativeBridge.shareSystemUri(uri, _mimeFor(result))
+          : await NativeBridge.shareSystem(result.path);
       if (!mounted) return;
       if (response != 'ok') _snack(s.shareFailed);
     } catch (_) {
@@ -666,6 +836,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             strings: widget.strings,
             language: widget.language,
             busy: _busy,
+            diagnosticUrl: _lastUrl ?? _extractUrl(_urlController.text),
             onLanguageChanged: widget.onLanguageChanged,
           );
         },
@@ -673,6 +844,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } catch (_) {
       // The sheet is optional; never let it take down the screen.
     }
+    // Wi-Fi only may have changed while the sheet was open.
+    if (mounted) await _loadLocalState();
+  }
+
+  Future<void> _openHistory() async {
+    await _loadHistory();
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: kInk.withValues(alpha: 0.34),
+      builder: (_) => _HistorySheet(
+        strings: s,
+        items: _history,
+        onChanged: _loadHistory,
+      ),
+    );
+  }
+
+  Future<void> _runDiagnostics() async {
+    final url = _lastUrl ?? _extractUrl(_urlController.text);
+    if (url == null) {
+      _snack(s.diagnosticsNoLink);
+      return;
+    }
+    await showDiagnosticsDialog(context, s, url);
   }
 
   void _snack(String message) {
@@ -691,9 +890,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       caseSensitive: false,
     ).firstMatch(trimmed)?.group(0);
 
+    // Hosts people actually paste. A full https:// link is accepted for any
+    // site yt-dlp knows; this list only covers bare links without a scheme.
     final bare = direct ??
         RegExp(
-          r"""(?:https?://)?(?:www\.|m\.|web\.)?(?:instagram\.com|instagr\.am|ig\.me|facebook\.com|fb\.watch|fb\.com|youtube\.com|youtu\.be|youtube-nocookie\.com|tiktok\.com|vm\.tiktok\.com|twitter\.com|x\.com|threads\.net)/[^\s<>"']+""",
+          r"""(?:https?://)?(?:www\.|m\.|web\.|v\.)?(?:instagram\.com|instagr\.am|ig\.me|facebook\.com|fb\.watch|fb\.com|youtube\.com|youtu\.be|youtube-nocookie\.com|tiktok\.com|vm\.tiktok\.com|vt\.tiktok\.com|twitter\.com|x\.com|threads\.net|reddit\.com|redd\.it|vimeo\.com|dailymotion\.com|dai\.ly|twitch\.tv|clips\.twitch\.tv|soundcloud\.com|pinterest\.com|pin\.it|snapchat\.com|rumble\.com|streamable\.com|bilibili\.com|b23\.tv|vk\.com|ok\.ru|likee\.video|sharechat\.com|moj\.video|linkedin\.com|imgur\.com|giphy\.com)/[^\s<>"']+""",
           caseSensitive: false,
         ).firstMatch(trimmed)?.group(0);
 
@@ -777,6 +978,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
+
+  String _mimeFor(VideoResult result) =>
+      result.isAudio ? 'audio/mpeg' : 'video/mp4';
 
   // ---------------------------------------------------------------------
   // UI
@@ -912,7 +1116,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _AppHeader(strings: s, onSettings: _openSettings),
+          _AppHeader(
+            strings: s,
+            onSettings: _openSettings,
+            onHistory: _openHistory,
+            historyCount: _history.length,
+          ),
           const SizedBox(height: 26),
           Text(
             s.heroEyebrow.toUpperCase(),
@@ -960,6 +1169,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               if (_inputError) setState(() => _inputError = false);
             },
           ),
+          if (_clipboardUrl != null) ...[
+            const SizedBox(height: 12),
+            _ClipboardCard(
+              strings: s,
+              url: _clipboardUrl!,
+              onUse: _useClipboard,
+              onDismiss: () => setState(() {
+                _dismissedClip = _clipboardUrl;
+                _clipboardUrl = null;
+              }),
+            ),
+          ],
+          if (_probing || _probe != null) ...[
+            const SizedBox(height: 12),
+            _QualityPicker(
+              strings: s,
+              probe: _probe,
+              probing: _probing,
+              audioOnly: _audioOnly,
+              maxHeight: _maxHeight,
+              onChanged: (audioOnly, maxHeight) {
+                setState(() {
+                  _audioOnly = audioOnly;
+                  _maxHeight = maxHeight;
+                });
+              },
+            ),
+          ],
           const SizedBox(height: 13),
           Text(
             s.worksWith,
@@ -1139,17 +1376,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       icon: LucideIcons.hardDrive,
                       label: _sizeText(result.sizeBytes),
                     ),
-                    MetaPill(
-                      icon: result.hasAudio
-                          ? LucideIcons.volume2
-                          : LucideIcons.volumeX,
-                      label: result.hasAudio ? s.sound : s.noSound,
-                      foreground: result.hasAudio ? kGreen : kAmber,
-                      background:
-                          result.hasAudio ? kBrandTint : kAmberTint,
-                      borderColor:
-                          result.hasAudio ? kBrandTint : kAmberTint,
-                    ),
+                    if (result.isAudio)
+                      MetaPill(
+                        icon: LucideIcons.music,
+                        label: 'MP3',
+                        foreground: kGreen,
+                        background: kBrandTint,
+                        borderColor: kBrandTint,
+                      )
+                    else
+                      MetaPill(
+                        icon: result.hasAudio
+                            ? LucideIcons.volume2
+                            : LucideIcons.volumeX,
+                        label: result.hasAudio ? s.sound : s.noSound,
+                        foreground: result.hasAudio ? kGreen : kAmber,
+                        background:
+                            result.hasAudio ? kBrandTint : kAmberTint,
+                        borderColor:
+                            result.hasAudio ? kBrandTint : kAmberTint,
+                      ),
                   ],
                 ),
                 if (result.trimmed) ...[
@@ -1167,7 +1413,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 const SizedBox(height: 9),
                 _GalleryRow(
                   saved: _gallerySaved,
-                  savedText: s.savedGallery,
+                  savedText: result.isAudio ? s.audioBody : s.savedGallery,
                   missingText: s.notSavedGallery,
                   saveText: s.saveGallery,
                   onSave: _saveAgain,
@@ -1295,9 +1541,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const SizedBox(height: 10),
             DepthButton(
               tone: DepthTone.secondary,
+              icon: LucideIcons.rotateCcw,
+              label: s.tryAnotherWay,
+              onPressed: _lastUrlAgain,
+            ),
+            const SizedBox(height: 10),
+            DepthButton(
+              tone: DepthTone.secondary,
               icon: LucideIcons.share2,
               label: s.shareLink,
               onPressed: _shareLink,
+            ),
+            const SizedBox(height: 10),
+            DepthButton(
+              tone: DepthTone.quiet,
+              icon: LucideIcons.stethoscope,
+              label: s.diagnosticsRun,
+              onPressed: _runDiagnostics,
             ),
             const SizedBox(height: 10),
           ],
@@ -1454,10 +1714,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 // ---------------------------------------------------------------------------
 
 class _AppHeader extends StatelessWidget {
-  const _AppHeader({required this.strings, this.onSettings});
+  const _AppHeader({
+    required this.strings,
+    this.onSettings,
+    this.onHistory,
+    this.historyCount = 0,
+  });
 
   final AppLocalizations strings;
   final VoidCallback? onSettings;
+  final VoidCallback? onHistory;
+  final int historyCount;
 
   @override
   Widget build(BuildContext context) {
@@ -1491,8 +1758,37 @@ class _AppHeader extends StatelessWidget {
             ],
           ),
         ),
+        if (onHistory != null) ...[
+          const SizedBox(width: 6),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              SoftIconButton(
+                icon: LucideIcons.history,
+                onPressed: onHistory,
+                tooltip: strings.recent,
+              ),
+              if (historyCount > 0)
+                PositionedDirectional(
+                  top: 7,
+                  end: 7,
+                  child: IgnorePointer(
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: kGreen,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: kSurface, width: 1.6),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
         if (onSettings != null) ...[
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           SoftIconButton(
             icon: LucideIcons.settings,
             onPressed: onSettings,
@@ -1915,6 +2211,7 @@ class _Preview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (result.isAudio) return _AudioCard(result: result, strings: strings);
     return LayoutBuilder(
       builder: (context, constraints) {
         const maxHeight = 300.0;
@@ -2121,6 +2418,730 @@ class _GalleryRow extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Link details and history
+// ---------------------------------------------------------------------------
+
+String _hostOf(String url) {
+  final host = Uri.tryParse(url)?.host ?? '';
+  return host.startsWith('www.') ? host.substring(4) : host;
+}
+
+String _bytesLabel(int bytes) {
+  if (bytes <= 0) return '';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
+  return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+}
+
+/// A link already sitting on the clipboard. Tapping anywhere uses it; the X
+/// only hides the suggestion.
+class _ClipboardCard extends StatelessWidget {
+  const _ClipboardCard({
+    required this.strings,
+    required this.url,
+    required this.onUse,
+    required this.onDismiss,
+  });
+
+  final AppLocalizations strings;
+  final String url;
+  final VoidCallback onUse;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      button: true,
+      label: strings.clipboardUse,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onUse,
+        child: SurfaceCard(
+          padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 6, 10),
+          color: kBrandTint.withValues(alpha: 0.62),
+          shadow: false,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: kSurface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFD4E6DA)),
+                ),
+                child: const Icon(
+                  LucideIcons.clipboardPaste,
+                  size: 16,
+                  color: kGreen,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      strings.clipboardFound,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: kDeepGreen,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _hostOf(url),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textDirection: TextDirection.ltr,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: kMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          LucideIcons.arrowRight,
+                          size: 12,
+                          color: kGreen,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            strings.clipboardUse,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: kGreen,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 2),
+              IconButton(
+                onPressed: onDismiss,
+                tooltip: strings.clipboardNo,
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(LucideIcons.x, size: 16, color: kMuted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Quality and size, read from the link before anything is downloaded.
+class _QualityPicker extends StatelessWidget {
+  const _QualityPicker({
+    required this.strings,
+    required this.probe,
+    required this.probing,
+    required this.audioOnly,
+    required this.maxHeight,
+    required this.onChanged,
+  });
+
+  final AppLocalizations strings;
+  final LinkProbe? probe;
+  final bool probing;
+  final bool audioOnly;
+  final int maxHeight;
+  final void Function(bool audioOnly, int maxHeight) onChanged;
+
+  String _duration(int ms) {
+    if (ms <= 0) return '';
+    final total = (ms / 1000).floor();
+    return '${total ~/ 60}:${(total % 60).toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final data = probe;
+    if (probing || data == null) {
+      return SurfaceCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        shadow: false,
+        color: kSurfaceMuted,
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                strings.checkingLink,
+                style: theme.textTheme.bodySmall?.copyWith(color: kMuted),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final videos = data.videoOptions;
+    final audio = data.audioOption;
+    final duration = _duration(data.durationMs);
+
+    return SurfaceCard(
+      padding: const EdgeInsets.fromLTRB(14, 13, 14, 14),
+      shadow: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 1),
+                child: Icon(
+                  LucideIcons.circleCheck,
+                  size: 15,
+                  color: kGreen,
+                ),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  data.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(height: 1.3),
+                ),
+              ),
+              if (duration.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                MetaPill(icon: LucideIcons.clock, label: duration),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            strings.quality.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: kMuted,
+              letterSpacing: 0.9,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final option in videos)
+                _QualityChip(
+                  label: '${option.height}p',
+                  size: _bytesLabel(option.sizeBytes),
+                  selected: !audioOnly && option.height == maxHeight,
+                  onTap: () => onChanged(false, option.height),
+                ),
+              if (videos.isEmpty && data.unknownVideoOption != null)
+                _QualityChip(
+                  label: 'MP4',
+                  size: _bytesLabel(data.unknownVideoOption!.sizeBytes),
+                  selected: !audioOnly && maxHeight == 0,
+                  onTap: () => onChanged(false, 0),
+                ),
+              if (audio != null)
+                _QualityChip(
+                  label: strings.qualityAudio,
+                  size: _bytesLabel(audio.sizeBytes),
+                  selected: audioOnly,
+                  onTap: () => onChanged(true, 0),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QualityChip extends StatelessWidget {
+  const _QualityChip({
+    required this.label,
+    required this.size,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String size;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? kBrandTint : kSurfaceMuted,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? kGreen.withValues(alpha: 0.55) : kLine,
+              width: selected ? 1.4 : 1.0,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: selected ? kDeepGreen : kInk,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (size.isNotEmpty)
+                Text(
+                  size,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: kMuted,
+                    letterSpacing: 0,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown instead of the video player when the user asked for sound only.
+class _AudioCard extends StatelessWidget {
+  const _AudioCard({required this.result, required this.strings});
+
+  final VideoResult result;
+  final AppLocalizations strings;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SurfaceCard(
+      padding: const EdgeInsets.all(16),
+      color: kBrandTint.withValues(alpha: 0.6),
+      shadow: false,
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: kSurface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFD4E6DA)),
+            ),
+            child: const Icon(
+              LucideIcons.music2,
+              size: 24,
+              color: kGreen,
+            ),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  strings.audioTitle,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: kDeepGreen,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  strings.audioBody,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: kMuted,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistorySheet extends StatefulWidget {
+  const _HistorySheet({
+    required this.strings,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final AppLocalizations strings;
+  final List<HistoryEntry> items;
+  final Future<void> Function() onChanged;
+
+  @override
+  State<_HistorySheet> createState() => _HistorySheetState();
+}
+
+class _HistorySheetState extends State<_HistorySheet> {
+  late List<HistoryEntry> _items = List<HistoryEntry>.of(widget.items);
+  bool _working = false;
+
+  AppLocalizations get s => widget.strings;
+
+  Future<void> _reload() async {
+    await widget.onChanged();
+    final items = await HistoryStore.load();
+    if (mounted) setState(() => _items = List<HistoryEntry>.of(items));
+  }
+
+  Future<void> _clear() async {
+    if (_working) return;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(s.recentClearTitle),
+        content: Text(s.recentClearBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(s.clipboardNo),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(s.recentClear),
+          ),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    setState(() => _working = true);
+    try {
+      await HistoryStore.clear();
+      await _reload();
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  Future<void> _open(HistoryEntry entry) async {
+    final uri = entry.uri;
+    if (uri == null) return;
+    await NativeBridge.openUri(uri, entry.mime);
+  }
+
+  Future<void> _share(HistoryEntry entry) async {
+    final uri = entry.uri;
+    if (uri == null) return;
+    final response = await NativeBridge.shareWhatsAppUri(uri, entry.mime);
+    if (!mounted) return;
+    if (response == 'not_installed') {
+      _snack(s.whatsappMissing);
+    } else if (response != 'ok') {
+      _snack(s.shareFailed);
+    }
+  }
+
+  Future<void> _delete(HistoryEntry entry) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(s.deleteTitle),
+        content: Text(s.deleteBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(s.clipboardNo),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: kRed),
+            child: Text(s.deleteFile),
+          ),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    final removed = await NativeBridge.deleteUri(
+      uri: entry.uri,
+      path: entry.path,
+    );
+    if (!mounted) return;
+    if (!removed) {
+      _snack(s.deleteFailed);
+      return;
+    }
+    await HistoryStore.remove(entry.id);
+    await _reload();
+    if (mounted) _snack(s.fileDeleted);
+  }
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.88;
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      decoration: const BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(top: BorderSide(color: kLine, width: 1.0)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x1F0F1A14),
+            blurRadius: 28,
+            offset: Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: kLineStrong,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 17),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      s.recent,
+                      style: theme.textTheme.headlineMedium,
+                    ),
+                  ),
+                  SoftIconButton(
+                    icon: LucideIcons.x,
+                    onPressed: () => Navigator.of(context).pop(),
+                    tooltip: s.close,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (_items.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 34),
+                  child: Column(
+                    children: [
+                      const EmptyStateIcon(
+                        icon: LucideIcons.history,
+                        size: 62,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        s.recentEmptyTitle,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        s.recentEmptyBody,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: kMuted,
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.only(bottom: 6),
+                    itemCount: _items.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, index) => _row(_items[index]),
+                  ),
+                ),
+              if (_items.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: TextButton(
+                    onPressed: _working ? null : _clear,
+                    style: TextButton.styleFrom(
+                      foregroundColor: kMuted,
+                      minimumSize: const Size.fromHeight(44),
+                    ),
+                    child: Text(s.recentClear),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _row(HistoryEntry entry) {
+    final theme = Theme.of(context);
+    final thumbnail = entry.thumbnailPath;
+    final date = MaterialLocalizations.of(context)
+        .formatShortDate(entry.createdAt.toLocal());
+    final detail = [
+      if (entry.sizeBytes > 0) _bytesLabel(entry.sizeBytes),
+      date,
+    ].join('  ·  ');
+
+    return InkWell(
+      onTap: () => _open(entry),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(11),
+              child: SizedBox(
+                width: 52,
+                height: 52,
+                child: thumbnail != null && File(thumbnail).existsSync()
+                    ? Image.file(
+                        File(thumbnail),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            _thumbFallback(entry),
+                      )
+                    : _thumbFallback(entry),
+              ),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(height: 1.3),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    detail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(color: kMuted),
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(
+                LucideIcons.ellipsisVertical,
+                size: 18,
+                color: kMuted,
+              ),
+              onSelected: (value) {
+                switch (value) {
+                  case 'open':
+                    _open(entry);
+                  case 'share':
+                    _share(entry);
+                  case 'delete':
+                    _delete(entry);
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'open',
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.folderOpen, size: 16),
+                      const SizedBox(width: 9),
+                      Text(s.openFile),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'share',
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.messageCircle, size: 16),
+                      const SizedBox(width: 9),
+                      Text(s.sendWhatsApp),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      const Icon(
+                        LucideIcons.trash2,
+                        size: 16,
+                        color: kRed,
+                      ),
+                      const SizedBox(width: 9),
+                      Text(
+                        s.deleteFile,
+                        style: const TextStyle(color: kRed),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _thumbFallback(HistoryEntry entry) {
+    return Container(
+      color: entry.isAudio ? kAmberTint : kBrandTint,
+      child: Icon(
+        entry.isAudio ? LucideIcons.music2 : LucideIcons.film,
+        size: 20,
+        color: entry.isAudio ? kAmber : kGreen,
+      ),
     );
   }
 }

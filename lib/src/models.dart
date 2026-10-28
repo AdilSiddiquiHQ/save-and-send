@@ -16,6 +16,9 @@ class DownloadEvent {
     this.trimmed,
     this.sizeBytes,
     this.saved,
+    this.uri,
+    this.savedPath,
+    this.kind,
     this.message,
     this.detail,
     this.code,
@@ -38,6 +41,9 @@ class DownloadEvent {
   final String? thumbnailUrl;
   final bool? trimmed;
   final int? sizeBytes;
+  final String? uri;
+  final String? savedPath;
+  final String? kind;
   final bool? saved;
   final String? message;
   final String? detail;
@@ -77,6 +83,9 @@ class DownloadEvent {
       thumbnailUrl: asString(map['thumbnailUrl']),
       trimmed: asBool(map['trimmed']),
       sizeBytes: asInt(map['sizeBytes']),
+      uri: asString(map['uri']),
+      savedPath: asString(map['savedPath']),
+      kind: asString(map['kind']),
       saved: asBool(map['saved']),
       message: asString(map['message']),
       detail: asString(map['detail']),
@@ -99,6 +108,9 @@ class VideoResult {
     required this.sizeBytes,
     this.thumbnailPath,
     this.thumbnailUrl,
+    this.uri,
+    this.savedPath,
+    this.kind = 'video',
   });
 
   final String path;
@@ -111,6 +123,11 @@ class VideoResult {
   final int sizeBytes;
   final String? thumbnailPath;
   final String? thumbnailUrl;
+  final String? uri;
+  final String? savedPath;
+  final String kind;
+
+  bool get isAudio => kind == 'audio';
 
   factory VideoResult.fromEvent(DownloadEvent event) {
     return VideoResult(
@@ -124,11 +141,83 @@ class VideoResult {
       sizeBytes: event.sizeBytes ?? 0,
       thumbnailPath: event.thumbnailPath,
       thumbnailUrl: event.thumbnailUrl,
+      uri: event.uri,
+      savedPath: event.savedPath,
+      kind: event.kind ?? (event.width == 0 ? 'audio' : 'video'),
     );
   }
 
   double get aspectRatio {
     if (width <= 0 || height <= 0) return 9 / 16;
     return (width / height).clamp(0.4, 2.5);
+  }
+}
+
+/// One downloadable size for a link, read before the download starts.
+class ProbeOption {
+  const ProbeOption({
+    required this.height,
+    required this.sizeBytes,
+    required this.audio,
+  });
+
+  final int height;
+  final int sizeBytes;
+  final bool audio;
+
+  factory ProbeOption.fromMap(Map<dynamic, dynamic> map) {
+    return ProbeOption(
+      height: (map['height'] as num?)?.toInt() ?? 0,
+      sizeBytes: (map['sizeBytes'] as num?)?.toInt() ?? 0,
+      audio: map['audio'] == true,
+    );
+  }
+
+  String get label => audio ? 'MP3' : '${height}p';
+}
+
+/// What the link offers, fetched without downloading it.
+class LinkProbe {
+  const LinkProbe({
+    required this.title,
+    required this.durationMs,
+    required this.options,
+    this.thumbnailUrl,
+  });
+
+  final String title;
+  final int durationMs;
+  final List<ProbeOption> options;
+  final String? thumbnailUrl;
+
+  List<ProbeOption> get videoOptions =>
+      options.where((option) => !option.audio && option.height > 0).toList();
+  ProbeOption? get audioOption {
+    for (final option in options) {
+      if (option.audio) return option;
+    }
+    return null;
+  }
+
+  /// A video whose height the site did not report. The downloader still gets a
+  /// normal 1080p-capped format ladder for it.
+  ProbeOption? get unknownVideoOption {
+    for (final option in options) {
+      if (!option.audio && option.height <= 0) return option;
+    }
+    return null;
+  }
+
+  factory LinkProbe.fromMap(Map<dynamic, dynamic> map) {
+    final raw = (map['options'] as List?) ?? const [];
+    return LinkProbe(
+      title: (map['title'] as String?)?.trim() ?? '',
+      durationMs: (map['durationMs'] as num?)?.toInt() ?? 0,
+      thumbnailUrl: map['thumbnailUrl'] as String?,
+      options: raw
+          .whereType<Map>()
+          .map(ProbeOption.fromMap)
+          .toList(growable: false),
+    );
   }
 }

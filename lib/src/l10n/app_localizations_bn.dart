@@ -71,7 +71,7 @@ class AppLocalizationsBn extends AppLocalizations {
   String get download => 'ভিডিও ডাউনলোড করুন';
 
   @override
-  String get downloadHint => 'সাউন্ডসহ MP4 • 60 সেকেন্ড পর্যন্ত';
+  String get downloadHint => 'MP4 বা MP3 • 60 সেকেন্ড পর্যন্ত';
 
   @override
   String get preparing => 'তৈরি হচ্ছে…';
@@ -375,4 +375,117 @@ class AppLocalizationsBn extends AppLocalizations {
   @override
   String get errGeneric =>
       'ভিডিওটা ডাউনলোড হয়নি। হতে পারে এটা প্রাইভেট, ডিলিট হয়ে গেছে, বা লিংকটা ভুল।';
+
+  @override
+  String get recent => 'সাম্প্রতিক';
+
+  @override
+  String get recentEmptyTitle => 'এখনো কিছু সেভ হয়নি';
+
+  @override
+  String get recentEmptyBody => 'যেসব ভিডিও ডাউনলোড করবেন সেগুলো এখানে দেখাবে।';
+
+  @override
+  String get recentClear => 'লিস্ট মুছুন';
+
+  @override
+  String get recentClearTitle => 'লিস্টটা মুছে ফেলবেন?';
+
+  @override
+  String get recentClearBody => 'ফাইলগুলো গ্যালারিতেই থাকবে।';
+
+  @override
+  String get openFile => 'খুলুন';
+
+  @override
+  String get deleteFile => 'ডিলিট করুন';
+
+  @override
+  String get deleteTitle => 'এই ফাইলটা ডিলিট করবেন?';
+
+  @override
+  String get deleteBody => 'গ্যালারি থেকেও মুছে যাবে।';
+
+  @override
+  String get fileDeleted => 'ডিলিট হয়ে গেছে।';
+
+  @override
+  String get deleteFailed => 'ফাইলটা ডিলিট করা গেল না।';
+
+  @override
+  String get clipboardFound => 'ক্লিপবোর্ডে একটা লিংক আছে';
+
+  @override
+  String get clipboardUse => 'এটাই ব্যবহার করুন';
+
+  @override
+  String get clipboardNo => 'এখন না';
+
+  @override
+  String get checkingLink => 'লিংকটা দেখা হচ্ছে…';
+
+  @override
+  String get quality => 'কোয়ালিটি';
+
+  @override
+  String get qualityBest => 'সেরা';
+
+  @override
+  String get qualityAudio => 'শুধু শব্দ';
+
+  @override
+  String get sizeUnknown => 'সাইজ জানা নেই';
+
+  @override
+  String get audioTitle => 'শব্দ সেভ হয়েছে';
+
+  @override
+  String get audioBody => 'ফোনের মিউজিক অ্যাপে পাবেন।';
+
+  @override
+  String get tryAnotherWay => 'অন্য উপায়ে চেষ্টা করুন';
+
+  @override
+  String get wifiOnly => 'শুধু Wi-Fi';
+
+  @override
+  String get wifiOnlyHelp => 'বড় ডাউনলোড Wi-Fi এলে করুন।';
+
+  @override
+  String get wifiNeeded =>
+      'আপনি মোবাইল ডেটায় আছেন। Wi-Fi এ যুক্ত হোন বা শুধু Wi-Fi বন্ধ করুন।';
+
+  @override
+  String get engineChannel => 'ডাউনলোডার আপডেট';
+
+  @override
+  String get engineChannelHelp =>
+      'স্টেবল বেশি নিরাপদ। নাইটলি সাইটের সমস্যা তাড়াতাড়ি ঠিক করে।';
+
+  @override
+  String get engineStable => 'স্টেবল';
+
+  @override
+  String get engineNightly => 'নাইটলি';
+
+  @override
+  String get diagnostics => 'সমস্যা সমাধান';
+
+  @override
+  String get diagnosticsHelp => 'লিংক ডাউনলোড না হলে রিপোর্ট বানান।';
+
+  @override
+  String get diagnosticsRun => 'লিংক দেখুন';
+
+  @override
+  String get diagnosticsCopy => 'রিপোর্ট কপি করুন';
+
+  @override
+  String get diagnosticsCopied => 'রিপোর্ট কপি হয়েছে।';
+
+  @override
+  String get diagnosticsNoLink => 'আগে একটা লিংক পেস্ট করুন।';
+
+  @override
+  String get diagnosticsRunning => 'দেখা হচ্ছে…';
 }

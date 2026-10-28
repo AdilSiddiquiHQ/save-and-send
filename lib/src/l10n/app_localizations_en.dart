@@ -70,7 +70,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get download => 'Download video';
 
   @override
-  String get downloadHint => 'MP4 with sound • up to 60 seconds';
+  String get downloadHint => 'MP4 or MP3 • up to 60 seconds';
 
   @override
   String get preparing => 'Getting ready…';
@@ -375,4 +375,117 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errGeneric =>
       'Couldn\'t download this video. It may be private, deleted, or the link may be wrong.';
+
+  @override
+  String get recent => 'Recent';
+
+  @override
+  String get recentEmptyTitle => 'Nothing saved yet';
+
+  @override
+  String get recentEmptyBody => 'Your finished downloads will show up here.';
+
+  @override
+  String get recentClear => 'Clear list';
+
+  @override
+  String get recentClearTitle => 'Clear the list?';
+
+  @override
+  String get recentClearBody => 'The files stay in your Gallery.';
+
+  @override
+  String get openFile => 'Open';
+
+  @override
+  String get deleteFile => 'Delete';
+
+  @override
+  String get deleteTitle => 'Delete this file?';
+
+  @override
+  String get deleteBody => 'It also disappears from your Gallery.';
+
+  @override
+  String get fileDeleted => 'Deleted.';
+
+  @override
+  String get deleteFailed => 'Couldn\'t delete that file.';
+
+  @override
+  String get clipboardFound => 'There\'s a link on your clipboard';
+
+  @override
+  String get clipboardUse => 'Use it';
+
+  @override
+  String get clipboardNo => 'Not now';
+
+  @override
+  String get checkingLink => 'Checking the link…';
+
+  @override
+  String get quality => 'Quality';
+
+  @override
+  String get qualityBest => 'Best';
+
+  @override
+  String get qualityAudio => 'Sound only';
+
+  @override
+  String get sizeUnknown => 'Size unknown';
+
+  @override
+  String get audioTitle => 'Sound saved';
+
+  @override
+  String get audioBody => 'It\'s in your phone\'s Music app.';
+
+  @override
+  String get tryAnotherWay => 'Try another method';
+
+  @override
+  String get wifiOnly => 'Wi-Fi only';
+
+  @override
+  String get wifiOnlyHelp => 'Wait for Wi-Fi before big downloads.';
+
+  @override
+  String get wifiNeeded =>
+      'You\'re on mobile data. Join Wi-Fi or turn Wi-Fi only off.';
+
+  @override
+  String get engineChannel => 'Downloader updates';
+
+  @override
+  String get engineChannelHelp =>
+      'Stable is safer. Nightly fixes sites sooner.';
+
+  @override
+  String get engineStable => 'Stable';
+
+  @override
+  String get engineNightly => 'Nightly';
+
+  @override
+  String get diagnostics => 'Troubleshooting';
+
+  @override
+  String get diagnosticsHelp => 'Make a report when a link won\'t download.';
+
+  @override
+  String get diagnosticsRun => 'Check link';
+
+  @override
+  String get diagnosticsCopy => 'Copy report';
+
+  @override
+  String get diagnosticsCopied => 'Report copied.';
+
+  @override
+  String get diagnosticsNoLink => 'Paste a link first.';
+
+  @override
+  String get diagnosticsRunning => 'Checking…';
 }

@@ -34,4 +34,4 @@ jobs:
       - name: Unit and widget tests
         # Golden tests are platform-specific and are kept as local visual
         # references; the behavior and localization tests below run everywhere.
-        run: flutter test test/app_test.dart test/widget_test.dart test/l10n_test.dart
+        run: flutter test test/app_test.dart test/widget_test.dart test/l10n_test.dart test/history_test.dart

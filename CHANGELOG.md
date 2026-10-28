@@ -6,6 +6,50 @@ All notable changes to Save & Send are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-10-28
+
+### Added
+
+- **Quality and size before the download.** Pasting a link reads its title,
+  length, and an estimated size for every height up to 1080p, plus sound-only.
+  The chosen height is passed straight to yt-dlp, so a 480p tap really is a
+  480p download.
+- **Sound only.** Saves a 192 kbps MP3 through the bundled LAME encoder, into
+  `Music/Save & Send`, shared as `audio/mpeg`.
+- **Real filenames.** The Gallery entry, the share name, and Recent use the
+  video title. No more `SaveAndSend_20261028_120000.mp4`.
+- **Clipboard detection.** A supported link already on the clipboard is offered
+  on the home screen. It never downloads on its own, and "Not now" is remembered
+  for that link.
+- **Recent downloads.** The last 30 files with a thumbnail, size, and date, plus
+  open, re-send, delete, and clear. Entries point at the Gallery copy, so cache
+  cleanup cannot break them.
+- **Wi-Fi only.** Holds a download until Wi-Fi is available and says so instead
+  of failing halfway.
+- **Try another method.** The error screen can rerun the link with a different
+  player client and format ladder.
+- **Link check.** Troubleshooting runs `yt-dlp --simulate --verbose`, redacts
+  app paths and cookie lines, and lets you copy the report.
+- **Engine channel picker.** Stable or Nightly, applied to the next update.
+- Success and error haptics.
+- Reddit `/s/` share links are resolved before download, and bare links from
+  Vimeo, Dailymotion, Twitch, Reddit, Pinterest, SoundCloud, Bilibili, and other
+  yt-dlp sites are recognised without typing `https://`.
+
+### Changed
+
+- Gallery saves return a MediaStore URI; opening, re-sharing, and deleting use
+  that URI instead of the rotating download cache.
+- The composer hint now reads "MP4 or MP3".
+- The home header has a Recent button with an unread dot when the list is not
+  empty.
+- History thumbnails are copied into app storage and pruned to the newest 60.
+
+### Fixed
+
+- A failed Gallery save no longer loses the file name or the result entry.
+- Audio-only downloads skip the video transcode path, which was wasted work.
+
 ## [1.1.1] — 2026-10-28
 
 ### Fixed

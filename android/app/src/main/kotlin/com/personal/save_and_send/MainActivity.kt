@@ -6,6 +6,8 @@ import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.MediaScannerConnection
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -51,7 +53,7 @@ class MainActivity : FlutterActivity() {
     @Volatile private var engineReady = false
 
     private val downloader: Downloader by lazy {
-        Downloader(applicationContext, ::emitEvent, ::saveVideoToGallery)
+        Downloader(applicationContext, ::emitEvent, ::saveMediaToGallery)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,7 +110,20 @@ class MainActivity : FlutterActivity() {
                             io.execute {
                                 try {
                                     ensureEngineReady()
-                                    downloader.start(requestId, url)
+                                    val options = call.argument<Map<String, Any?>>("options")
+                                        ?: emptyMap()
+                                    downloader.start(
+                                        requestId,
+                                        url,
+                                        Downloader.Options(
+                                            maxHeight = (options["maxHeight"] as? Number)
+                                                ?.toInt() ?: 0,
+                                            audioOnly = options["audioOnly"] as? Boolean
+                                                ?: false,
+                                            alternate = options["alternate"] as? Boolean
+                                                ?: false,
+                                        ),
+                                    )
                                     mainHandler.post { result.success(null) }
                                 } catch (e: Exception) {
                                     mainHandler.post {
@@ -171,8 +186,112 @@ class MainActivity : FlutterActivity() {
                         } else {
                             io.execute {
                                 val ok = runCatching {
-                                    saveVideoToGallery(File(path))
+                                    saveMediaToGallery(
+                                        File(path),
+                                        File(path).nameWithoutExtension,
+                                        File(path).extension.equals("mp3", true),
+                                    )["ok"] == true
                                 }.getOrDefault(false)
+                                mainHandler.post { result.success(ok) }
+                            }
+                        }
+                    }
+
+                    "probe" -> {
+                        val url = call.argument<String>("url")
+                        if (url.isNullOrBlank()) {
+                            result.error("BAD_ARGS", "A link is required.", null)
+                        } else {
+                            io.execute {
+                                try {
+                                    ensureEngineReady()
+                                    val probe = downloader.probe(url)
+                                    mainHandler.post {
+                                        result.success(
+                                            mapOf(
+                                                "title" to probe.title,
+                                                "durationMs" to probe.durationMs,
+                                                "thumbnailUrl" to probe.thumbnailUrl,
+                                                "options" to probe.options.map { it.toMap() },
+                                            )
+                                        )
+                                    }
+                                } catch (e: Exception) {
+                                    mainHandler.post {
+                                        result.error(
+                                            "PROBE",
+                                            e.message ?: "Couldn't read this link.",
+                                            null,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    "diagnose" -> {
+                        val url = call.argument<String>("url")
+                        if (url.isNullOrBlank()) {
+                            result.error("BAD_ARGS", "A link is required.", null)
+                        } else {
+                            io.execute {
+                                val log = runCatching { downloader.diagnose(url) }
+                                    .getOrElse { it.message ?: it.toString() }
+                                mainHandler.post { result.success(log) }
+                            }
+                        }
+                    }
+
+                    "isOnWifi" -> result.success(isOnWifi())
+
+                    "shareWhatsAppUri" -> {
+                        val uri = call.argument<String>("uri")
+                        val mime = call.argument<String>("mime") ?: "video/mp4"
+                        if (uri.isNullOrBlank()) {
+                            result.error("BAD_ARGS", "Missing file URI.", null)
+                        } else {
+                            result.success(shareWhatsAppUri(Uri.parse(uri), mime))
+                        }
+                    }
+
+                    "shareStatusUri" -> {
+                        val uri = call.argument<String>("uri")
+                        val mime = call.argument<String>("mime") ?: "video/mp4"
+                        if (uri.isNullOrBlank()) {
+                            result.error("BAD_ARGS", "Missing file URI.", null)
+                        } else {
+                            result.success(shareStatusUri(Uri.parse(uri), mime))
+                        }
+                    }
+
+                    "shareSystemUri" -> {
+                        val uri = call.argument<String>("uri")
+                        val mime = call.argument<String>("mime") ?: "video/mp4"
+                        if (uri.isNullOrBlank()) {
+                            result.error("BAD_ARGS", "Missing file URI.", null)
+                        } else {
+                            result.success(shareSystemUri(Uri.parse(uri), mime))
+                        }
+                    }
+
+                    "openUri" -> {
+                        val uri = call.argument<String>("uri")
+                        val mime = call.argument<String>("mime") ?: "video/mp4"
+                        if (uri.isNullOrBlank()) {
+                            result.error("BAD_ARGS", "Missing file URI.", null)
+                        } else {
+                            result.success(openUri(Uri.parse(uri), mime))
+                        }
+                    }
+
+                    "deleteUri" -> {
+                        val uri = call.argument<String>("uri")
+                        val path = call.argument<String>("path")
+                        if (uri.isNullOrBlank() && path.isNullOrBlank()) {
+                            result.error("BAD_ARGS", "Missing file.", null)
+                        } else {
+                            io.execute {
+                                val ok = deleteMedia(uri, path)
                                 mainHandler.post { result.success(ok) }
                             }
                         }
@@ -544,9 +663,17 @@ class MainActivity : FlutterActivity() {
         }
         io.execute {
             try {
+                val channel = if (
+                    getSharedPreferences(PREFS, MODE_PRIVATE)
+                        .getString("engine_channel", "nightly") == "stable"
+                ) {
+                    YoutubeDL.UpdateChannel.STABLE
+                } else {
+                    YoutubeDL.UpdateChannel.NIGHTLY
+                }
                 val status = YoutubeDL.updateYoutubeDL(
                     applicationContext,
-                    YoutubeDL.UpdateChannel.NIGHTLY,
+                    channel,
                 )
                 val version = runCatching {
                     YoutubeDL.versionName(applicationContext)
@@ -576,11 +703,24 @@ class MainActivity : FlutterActivity() {
     // ---------------------------------------------------------------------
 
     private fun saveVideoToGallery(file: File): Boolean {
-        if (!file.exists() || file.length() == 0L) return false
+        return saveMediaToGallery(file, file.nameWithoutExtension, false)["ok"] == true
+    }
 
-        val name = "SaveAndSend_${
-            SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        }.mp4"
+    /**
+     * Copies the finished file into the Gallery (or Music, for audio-only) with
+     * the video's own title, and returns the content URI so the app can open,
+     * re-share, and delete it later.
+     */
+    private fun saveMediaToGallery(
+        file: File,
+        rawTitle: String,
+        audio: Boolean,
+    ): Map<String, Any?> {
+        if (!file.exists() || file.length() == 0L) return mapOf("ok" to false)
+
+        val extension = if (audio) "mp3" else "mp4"
+        val name = "${niceFileName(rawTitle)}.$extension"
+        val mime = if (audio) "audio/mpeg" else "video/mp4"
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             if (ContextCompat.checkSelfPermission(
@@ -594,56 +734,92 @@ class MainActivity : FlutterActivity() {
                         STORAGE_REQUEST,
                     )
                 }
-                return false
+                return mapOf("ok" to false)
             }
+            val base = if (audio) Environment.DIRECTORY_MUSIC else Environment.DIRECTORY_MOVIES
             return runCatching {
                 val directory = File(
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES),
+                    Environment.getExternalStoragePublicDirectory(base),
                     "Save & Send",
                 )
-                if (!directory.exists() && !directory.mkdirs()) return false
-                val target = File(directory, name)
+                if (!directory.exists() && !directory.mkdirs()) return mapOf("ok" to false)
+                var target = File(directory, name)
+                var counter = 2
+                while (target.exists()) {
+                    target = File(directory, "${name.substringBeforeLast('.')} ($counter).$extension")
+                    counter += 1
+                }
                 file.copyTo(target, overwrite = true)
                 MediaScannerConnection.scanFile(
                     this,
                     arrayOf(target.absolutePath),
-                    arrayOf("video/mp4"),
+                    arrayOf(mime),
                     null,
                 )
-                true
-            }.getOrDefault(false)
+                mapOf(
+                    "ok" to true,
+                    "uri" to fileUri(target).toString(),
+                    "path" to target.absolutePath,
+                )
+            }.getOrDefault(mapOf("ok" to false))
         }
 
+        val collection = if (audio) {
+            MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        } else {
+            MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        }
         val values = ContentValues().apply {
-            put(MediaStore.Video.Media.DISPLAY_NAME, name)
-            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-            put(MediaStore.Video.Media.DATE_ADDED, System.currentTimeMillis() / 1000)
+            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(MediaStore.MediaColumns.MIME_TYPE, mime)
+            put(MediaStore.MediaColumns.DATE_ADDED, System.currentTimeMillis() / 1000)
             put(
-                MediaStore.Video.Media.RELATIVE_PATH,
-                "${Environment.DIRECTORY_MOVIES}/Save & Send",
+                MediaStore.MediaColumns.RELATIVE_PATH,
+                if (audio) {
+                    "${Environment.DIRECTORY_MUSIC}/Save & Send"
+                } else {
+                    "${Environment.DIRECTORY_MOVIES}/Save & Send"
+                },
             )
-            put(MediaStore.Video.Media.IS_PENDING, 1)
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
 
-        val collection = MediaStore.Video.Media.getContentUri(
-            MediaStore.VOLUME_EXTERNAL_PRIMARY,
-        )
-        val uri = contentResolver.insert(collection, values) ?: return false
+        val uri = contentResolver.insert(collection, values)
+            ?: return mapOf("ok" to false)
         return try {
             contentResolver.openOutputStream(uri)?.use { output ->
                 file.inputStream().use { input -> input.copyTo(output) }
             } ?: run {
                 contentResolver.delete(uri, null, null)
-                return false
+                return mapOf("ok" to false)
             }
             values.clear()
-            values.put(MediaStore.Video.Media.IS_PENDING, 0)
+            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
             contentResolver.update(uri, values, null, null)
-            true
+            mapOf("ok" to true, "uri" to uri.toString(), "path" to null)
         } catch (_: Exception) {
             runCatching { contentResolver.delete(uri, null, null) }
-            false
+            mapOf("ok" to false)
         }
+    }
+
+    private fun niceFileName(raw: String): String {
+        val cleaned = raw
+            .replace(Regex("[\\\\/:*?\"<>|\\u0000-\\u001F]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .trim('.', ' ')
+            .take(80)
+            .trim()
+        return cleaned.ifBlank { "Save & Send" }
+    }
+
+    private fun isOnWifi(): Boolean {
+        val manager = getSystemService(ConnectivityManager::class.java) ?: return false
+        val network = manager.activeNetwork ?: return false
+        val capabilities = manager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
     }
 
     // ---------------------------------------------------------------------
@@ -653,16 +829,30 @@ class MainActivity : FlutterActivity() {
     private fun shareWhatsApp(path: String): String {
         val file = File(path)
         if (!file.exists()) return "missing"
+        return shareWhatsAppUri(fileUri(file), mimeFor(file))
+    }
+
+    private fun shareStatus(path: String): String {
+        val file = File(path)
+        if (!file.exists()) return "missing"
+        return shareStatusUri(fileUri(file), mimeFor(file))
+    }
+
+    private fun shareSystem(path: String): String {
+        val file = File(path)
+        if (!file.exists()) return "missing"
+        return shareSystemUri(fileUri(file), mimeFor(file))
+    }
+
+    private fun shareWhatsAppUri(uri: Uri, mime: String): String {
         val pkg = whatsAppPackage() ?: return "not_installed"
         return try {
-            val uri = fileUri(file)
             grantUriPermission(pkg, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
             val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "video/mp4"
+                type = mime
                 setPackage(pkg)
                 putExtra(Intent.EXTRA_STREAM, uri)
-                clipData = ClipData.newUri(contentResolver, "video", uri)
+                clipData = ClipData.newUri(contentResolver, "media", uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             startActivity(intent)
@@ -672,21 +862,17 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun shareStatus(path: String): String {
-        val file = File(path)
-        if (!file.exists()) return "missing"
+    private fun shareStatusUri(uri: Uri, mime: String): String {
         val pkg = whatsAppPackage() ?: return "not_installed"
         return try {
-            val uri = fileUri(file)
             grantUriPermission(pkg, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 data = Uri.parse("https://wa.me/status")
                 setPackage(pkg)
                 putExtra("share_type", "SHARE_TO_STATUS")
                 putExtra("source_app_package_name", packageName)
                 putExtra(Intent.EXTRA_STREAM, uri)
-                clipData = ClipData.newUri(contentResolver, "video", uri)
+                clipData = ClipData.newUri(contentResolver, "media", uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION)
             }
@@ -697,25 +883,61 @@ class MainActivity : FlutterActivity() {
         } catch (_: Exception) {
             // Older WhatsApp builds don't have the Status deep link. The
             // contact picker is the next best thing.
-            shareWhatsApp(path).let { if (it == "ok") "chat" else it }
+            shareWhatsAppUri(uri, mime).let { if (it == "ok") "chat" else it }
         }
     }
 
-    private fun shareSystem(path: String): String {
-        val file = File(path)
-        if (!file.exists()) return "missing"
+    private fun shareSystemUri(uri: Uri, mime: String): String {
         return try {
-            val uri = fileUri(file)
             val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "video/mp4"
+                type = mime
                 putExtra(Intent.EXTRA_STREAM, uri)
-                clipData = ClipData.newUri(contentResolver, "video", uri)
+                clipData = ClipData.newUri(contentResolver, "media", uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            startActivity(Intent.createChooser(intent, "Share video"))
+            startActivity(Intent.createChooser(intent, "Share"))
             "ok"
         } catch (_: Exception) {
             "failed"
+        }
+    }
+
+    private fun openUri(uri: Uri, mime: String): Boolean {
+        return try {
+            startActivity(
+                Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, mime)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                },
+            )
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun deleteMedia(uri: String?, path: String?): Boolean {
+        return runCatching {
+            if (!path.isNullOrBlank()) {
+                val file = File(path)
+                val deleted = !file.exists() || file.delete()
+                if (deleted) {
+                    MediaScannerConnection.scanFile(this, arrayOf(path), null, null)
+                }
+                deleted
+            } else if (!uri.isNullOrBlank()) {
+                contentResolver.delete(Uri.parse(uri), null, null) > 0
+            } else {
+                false
+            }
+        }.getOrDefault(false)
+    }
+
+    private fun mimeFor(file: File): String {
+        return when (file.extension.lowercase()) {
+            "mp3" -> "audio/mpeg"
+            "m4a" -> "audio/mp4"
+            else -> "video/mp4"
         }
     }
 

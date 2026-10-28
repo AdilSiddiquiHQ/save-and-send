@@ -69,7 +69,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get download => 'ویڈیو ڈاؤن لوڈ کریں';
 
   @override
-  String get downloadHint => 'آواز کے ساتھ MP4 • 60 سیکنڈ تک';
+  String get downloadHint => 'MP4 یا MP3 • 60 سیکنڈ تک';
 
   @override
   String get preparing => 'تیاری ہو رہی ہے…';
@@ -373,4 +373,118 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get errGeneric =>
       'یہ ویڈیو ڈاؤن لوڈ نہیں ہو سکی۔ یہ نجی، حذف شدہ یا غلط لنک ہو سکتا ہے۔';
+
+  @override
+  String get recent => 'حالیہ';
+
+  @override
+  String get recentEmptyTitle => 'ابھی کچھ محفوظ نہیں';
+
+  @override
+  String get recentEmptyBody =>
+      'جو ویڈیوز ڈاؤن لوڈ ہوں گی وہ یہاں نظر آئیں گی۔';
+
+  @override
+  String get recentClear => 'فہرست صاف کریں';
+
+  @override
+  String get recentClearTitle => 'فہرست صاف کر دیں؟';
+
+  @override
+  String get recentClearBody => 'فائلیں آپ کی گیلری میں رہیں گی۔';
+
+  @override
+  String get openFile => 'کھولیں';
+
+  @override
+  String get deleteFile => 'ڈیلیٹ کریں';
+
+  @override
+  String get deleteTitle => 'یہ فائل ڈیلیٹ کریں؟';
+
+  @override
+  String get deleteBody => 'یہ گیلری سے بھی ہٹ جائے گی۔';
+
+  @override
+  String get fileDeleted => 'ڈیلیٹ ہو گئی۔';
+
+  @override
+  String get deleteFailed => 'یہ فائل ڈیلیٹ نہیں ہو سکی۔';
+
+  @override
+  String get clipboardFound => 'کلپ بورڈ پر ایک لنک ہے';
+
+  @override
+  String get clipboardUse => 'یہی استعمال کریں';
+
+  @override
+  String get clipboardNo => 'ابھی نہیں';
+
+  @override
+  String get checkingLink => 'لنک دیکھا جا رہا ہے…';
+
+  @override
+  String get quality => 'کوالٹی';
+
+  @override
+  String get qualityBest => 'بہترین';
+
+  @override
+  String get qualityAudio => 'صرف آواز';
+
+  @override
+  String get sizeUnknown => 'سائز معلوم نہیں';
+
+  @override
+  String get audioTitle => 'آواز محفوظ ہو گئی';
+
+  @override
+  String get audioBody => 'یہ آپ کے فون کے میوزک ایپ میں ہے۔';
+
+  @override
+  String get tryAnotherWay => 'دوسرا طریقہ آزمائیں';
+
+  @override
+  String get wifiOnly => 'صرف وائی فائی';
+
+  @override
+  String get wifiOnlyHelp => 'بڑی ڈاؤن لوڈ وائی فائی آنے پر کریں۔';
+
+  @override
+  String get wifiNeeded =>
+      'آپ موبائل ڈیٹا پر ہیں۔ وائی فائی سے جڑیں یا صرف وائی فائی بند کریں۔';
+
+  @override
+  String get engineChannel => 'ڈاؤن لوڈر اپ ڈیٹس';
+
+  @override
+  String get engineChannelHelp =>
+      'اسٹیبل محفوظ ہے۔ نائٹلی سائٹس کے مسئلے جلدی ٹھیک کرتا ہے۔';
+
+  @override
+  String get engineStable => 'اسٹیبل';
+
+  @override
+  String get engineNightly => 'نائٹلی';
+
+  @override
+  String get diagnostics => 'مسئلہ حل کریں';
+
+  @override
+  String get diagnosticsHelp => 'لنک ڈاؤن لوڈ نہ ہو تو رپورٹ بنائیں۔';
+
+  @override
+  String get diagnosticsRun => 'لنک جانچیں';
+
+  @override
+  String get diagnosticsCopy => 'رپورٹ کاپی کریں';
+
+  @override
+  String get diagnosticsCopied => 'رپورٹ کاپی ہو گئی۔';
+
+  @override
+  String get diagnosticsNoLink => 'پہلے لنک پیسٹ کریں۔';
+
+  @override
+  String get diagnosticsRunning => 'جانچ ہو رہی ہے…';
 }

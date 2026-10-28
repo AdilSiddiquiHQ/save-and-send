@@ -68,7 +68,10 @@ void main() {
           case 'getInitialShare':
             return <String, dynamic>{};
           case 'getPref':
-            return call.arguments['key'] == 'has_run' ? '1' : null;
+            final key = call.arguments['key'];
+            if (key == 'has_run') return '1';
+            if (key == 'history_v1') return _historyJson;
+            return null;
           case 'ensureEngine':
             return <String, dynamic>{
               'version': '2025.11.12',
@@ -77,6 +80,18 @@ void main() {
           case 'download':
             _lastRequestId = call.arguments['requestId'] as String?;
             return null;
+          case 'probe':
+            return <String, dynamic>{
+              'title': 'A calm evening by the sea',
+              'durationMs': 34000,
+              'thumbnailUrl': null,
+              'options': [
+                {'height': 1080, 'sizeBytes': 82 * 1024 * 1024, 'audio': false},
+                {'height': 720, 'sizeBytes': 34 * 1024 * 1024, 'audio': false},
+                {'height': 480, 'sizeBytes': 12 * 1024 * 1024, 'audio': false},
+                {'height': 0, 'sizeBytes': 4 * 1024 * 1024, 'audio': true},
+              ],
+            };
           case 'engineVersion':
             return '2025.11.12';
           case 'hasCookies':
@@ -144,6 +159,34 @@ void main() {
     );
   });
 
+  testWidgets('probe visual', (tester) async {
+    _phone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextField).first,
+      'https://www.instagram.com/reel/ABC123/',
+    );
+    await tester.pump(const Duration(milliseconds: 1000));
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/probe.png'),
+    );
+  });
+
+  testWidgets('history visual', (tester) async {
+    _phone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(LucideIcons.history));
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/history.png'),
+    );
+  });
+
   testWidgets('settings visual', (tester) async {
     _phone(tester);
     await tester.pumpWidget(const SaveAndSendApp());
@@ -191,3 +234,12 @@ Future<void> _emit(Map<String, dynamic> event) async {
   await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .handlePlatformMessage(_eventChannelName, data, (ByteData? _) {});
 }
+
+const _historyJson = '['
+    '{"id":"1","title":"A calm evening by the sea","createdAt":1761600000000,'
+    '"sizeBytes":5242880,"durationMs":59000,"kind":"video",'
+    '"uri":"content://media/external/video/media/1"},'
+    '{"id":"2","title":"The song from that reel","createdAt":1761513600000,'
+    '"sizeBytes":4194304,"durationMs":185000,"kind":"audio",'
+    '"uri":"content://media/external/audio/media/2"}'
+    ']';

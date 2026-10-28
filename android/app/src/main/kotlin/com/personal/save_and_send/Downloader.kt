@@ -12,6 +12,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
+import kotlin.math.roundToLong
 
 /**
  * Downloads one link with the bundled yt-dlp + FFmpeg, then makes the file
@@ -20,8 +21,32 @@ import kotlin.math.max
 class Downloader(
     private val context: Context,
     private val emit: (Map<String, Any?>) -> Unit,
-    private val saveToGallery: (File) -> Boolean,
+    private val saveToGallery: (File, String, Boolean) -> Map<String, Any?>,
 ) {
+    data class Options(
+        val maxHeight: Int = 0,
+        val audioOnly: Boolean = false,
+        val alternate: Boolean = false,
+    )
+
+    data class ProbeOption(
+        val height: Int,
+        val sizeBytes: Long,
+        val audio: Boolean,
+    ) {
+        fun toMap(): Map<String, Any?> = mapOf(
+            "height" to height,
+            "sizeBytes" to sizeBytes,
+            "audio" to audio,
+        )
+    }
+
+    data class Probe(
+        val title: String,
+        val durationMs: Long,
+        val thumbnailUrl: String?,
+        val options: List<ProbeOption>,
+    )
     data class Result(
         val file: File,
         val title: String,
@@ -32,6 +57,9 @@ class Downloader(
         val thumbnail: File?,
         val thumbnailUrl: String?,
         val trimmed: Boolean,
+        val uri: String?,
+        val path: String?,
+        val audioOnly: Boolean,
     )
 
     class DownloadException(
@@ -59,10 +87,15 @@ class Downloader(
     @Volatile private var cancelled = false
     @Volatile private var activeId: String? = null
     @Volatile private var ffmpegProcess: Process? = null
+    private val probeBusy = AtomicBoolean(false)
 
     fun isBusy(): Boolean = activeId != null || globalBusy.get()
 
-    fun start(requestId: String, url: String) {
+    fun start(
+        requestId: String,
+        url: String,
+        options: Options = Options(),
+    ) {
         if (activeId != null || !globalBusy.compareAndSet(false, true)) {
             emit(
                 mapOf(
@@ -80,8 +113,15 @@ class Downloader(
 
         Thread({
             try {
+                // A size check and a download cannot share the Python runtime.
+                // Let an in-flight probe finish instead of failing the tap.
+                var waited = 0
+                while (probeBusy.get() && !cancelled && waited < 15_000) {
+                    Thread.sleep(100)
+                    waited += 100
+                }
                 if (cancelled) throw YoutubeDL.CanceledException()
-                val result = run(requestId, url)
+                val result = run(requestId, url, options)
                 if (cancelled) throw YoutubeDL.CanceledException()
                 emit(
                     mapOf(
@@ -97,6 +137,9 @@ class Downloader(
                         "thumbnailUrl" to result.thumbnailUrl,
                         "trimmed" to result.trimmed,
                         "sizeBytes" to result.file.length(),
+                        "uri" to result.uri,
+                        "savedPath" to result.path,
+                        "kind" to if (result.audioOnly) "audio" else "video",
                     )
                 )
             } catch (e: YoutubeDL.CanceledException) {
@@ -145,7 +188,7 @@ class Downloader(
         ffmpegProcess?.destroy()
     }
 
-    private fun run(requestId: String, url: String): Result {
+    private fun run(requestId: String, url: String, options: Options): Result {
         // The gallery has the saved copy, so old preview/share files are no
         // longer needed. Keep only this request's folder.
         val downloadsRoot = File(context.cacheDir, "downloads")
@@ -162,7 +205,11 @@ class Downloader(
         emit(mapOf("type" to "stage", "requestId" to requestId, "stage" to "preparing"))
         if (cancelled) throw YoutubeDL.CanceledException()
 
-        val response = executeWithFallback(requestId, url, workDir)
+        if (options.audioOnly) {
+            return runAudio(requestId, url, workDir)
+        }
+
+        val response = executeWithFallback(requestId, url, workDir, options)
         if (cancelled) throw YoutubeDL.CanceledException()
 
         emit(mapOf("type" to "stage", "requestId" to requestId, "stage" to "optimizing"))
@@ -188,17 +235,25 @@ class Downloader(
         if (cancelled) throw YoutubeDL.CanceledException()
         val finalInfo = inspect(finalFile)
 
+        val title = infoJson?.optString("title")?.takeIf { it.isNotBlank() }
+            ?: urlTitle(url)
+        val thumbnailSource = workDir.listFiles()
+            ?.filter { it.isFile && it.extension.lowercase() in IMAGE_EXTENSIONS }
+            ?.maxByOrNull { it.length() }
+
+        // Give the file the video's own name. The Gallery stays searchable and
+        // the name WhatsApp shows is the title, not "final.mp4".
+        val named = renameWithin(workDir, finalFile, title, "mp4")
+
         emit(mapOf("type" to "stage", "requestId" to requestId, "stage" to "saving"))
         if (cancelled) throw YoutubeDL.CanceledException()
-        val gallerySaved = runCatching { saveToGallery(finalFile) }.getOrDefault(false)
-        if (gallerySaved) {
+        val saved = runCatching { saveToGallery(named, title, false) }.getOrDefault(emptyMap())
+        val uri = saved["uri"] as? String
+        if (saved["ok"] == true) {
             emit(mapOf("type" to "gallery", "requestId" to requestId, "saved" to true))
         }
 
-        val title = infoJson?.optString("title")?.takeIf { it.isNotBlank() } ?: "Video"
-        val thumbnail = workDir.listFiles()
-            ?.filter { it.isFile && it.extension.lowercase() in IMAGE_EXTENSIONS }
-            ?.maxByOrNull { it.length() }
+        val thumbnail = keepThumbnail(thumbnailSource)
 
         val duration = when {
             finalInfo.durationMs > 0 -> finalInfo.durationMs
@@ -219,16 +274,16 @@ class Downloader(
             else -> inspected.displayHeight
         }
 
-        // Only the finished file, thumbnail and the tiny info file stay in cache.
+        // Only the finished file and the tiny info file stay in cache.
         raw.delete()
         workDir.listFiles()?.forEach { file ->
-            if (file != finalFile && file != thumbnail && file.name != "video.info.json") {
+            if (file != named && file.name != "video.info.json") {
                 file.delete()
             }
         }
 
         return Result(
-            file = finalFile,
+            file = named,
             title = title,
             durationMs = duration,
             width = width,
@@ -237,7 +292,378 @@ class Downloader(
             thumbnail = thumbnail,
             thumbnailUrl = infoJson?.optString("thumbnail")?.takeIf { it.isNotBlank() },
             trimmed = trimmed,
+            uri = uri,
+            path = saved["path"] as? String,
+            audioOnly = false,
         )
+    }
+
+    // ---------------------------------------------------------------------
+    // Audio only
+    // ---------------------------------------------------------------------
+
+    private fun runAudio(requestId: String, url: String, workDir: File): Result {
+        emit(mapOf("type" to "stage", "requestId" to requestId, "stage" to "downloading"))
+        val clean = normalizeUrl(url)
+        val referer = when {
+            isInstagram(clean) -> "https://www.instagram.com/"
+            isFacebook(clean) -> "https://www.facebook.com/"
+            else -> null
+        }
+
+        fun fetch(request: YoutubeDLRequest) =
+            YoutubeDL.getInstance().execute(request, requestId) { progress, eta, line ->
+                onProgress(requestId, progress, eta, line)
+            }
+
+        var response = try {
+            fetch(
+                buildRequest(
+                    clean,
+                    workDir,
+                    format = "ba[ext=m4a]/ba[ext=mp4]/ba/b",
+                    referer = referer,
+                )
+            )
+        } catch (e: Throwable) {
+            if (cancelled) throw YoutubeDL.CanceledException()
+            // Some sites only expose one muxed file. Download it and pull the
+            // soundtrack out on the phone instead of failing.
+            workDir.listFiles()?.forEach { file ->
+                if (file.isFile && file.name != "video.info.json") file.delete()
+            }
+            try {
+                fetch(
+                    buildRequest(
+                        clean,
+                        workDir,
+                        format = "b/best",
+                        referer = referer,
+                    )
+                )
+            } catch (second: Throwable) {
+                val detail = second.message ?: second.toString()
+                val classified = classify(detail, url)
+                throw DownloadException(
+                    classified.first,
+                    classified.second,
+                    detail.takeLast(1500),
+                )
+            }
+        }
+        if (cancelled) throw YoutubeDL.CanceledException()
+
+        val source = findDownloadedAudio(workDir)
+            ?: throw DownloadException(
+                "no_video",
+                "The download finished but no audio file was found.",
+                response.err.takeLast(1200),
+            )
+
+        emit(mapOf("type" to "stage", "requestId" to requestId, "stage" to "optimizing"))
+        val mp3 = File(workDir, "final.mp3")
+        convertToMp3(source, mp3)
+        if (cancelled) throw YoutubeDL.CanceledException()
+        if (!mp3.exists() || mp3.length() == 0L) {
+            throw DownloadException("processing", "Couldn't prepare the audio file.")
+        }
+
+        val infoJson = readInfoJson(workDir)
+        val title = infoJson?.optString("title")?.takeIf { it.isNotBlank() }
+            ?: urlTitle(url)
+        val named = renameWithin(workDir, mp3, title, "mp3")
+        val info = inspect(named)
+
+        emit(mapOf("type" to "stage", "requestId" to requestId, "stage" to "saving"))
+        if (cancelled) throw YoutubeDL.CanceledException()
+        val saved = runCatching { saveToGallery(named, title, true) }.getOrDefault(emptyMap())
+        if (saved["ok"] == true) {
+            emit(mapOf("type" to "gallery", "requestId" to requestId, "saved" to true))
+        }
+
+        val thumbnail = keepThumbnail(
+            workDir.listFiles()
+                ?.filter { it.isFile && it.extension.lowercase() in IMAGE_EXTENSIONS }
+                ?.maxByOrNull { it.length() },
+        )
+
+        source.delete()
+        workDir.listFiles()?.forEach { file ->
+            if (file != named && file.name != "video.info.json") file.delete()
+        }
+
+        return Result(
+            file = named,
+            title = title,
+            durationMs = info.durationMs,
+            width = 0,
+            height = 0,
+            hasAudio = true,
+            thumbnail = thumbnail,
+            thumbnailUrl = infoJson?.optString("thumbnail")?.takeIf { it.isNotBlank() },
+            trimmed = false,
+            uri = saved["uri"] as? String,
+            path = saved["path"] as? String,
+            audioOnly = true,
+        )
+    }
+
+    private fun convertToMp3(input: File, output: File) {
+        if (input.extension.equals("mp3", ignoreCase = true)) {
+            input.copyTo(output, overwrite = true)
+            return
+        }
+        val ffmpeg = ffmpegBinary()
+            ?: throw IOException("FFmpeg is missing from the installation.")
+        val command = listOf(
+            ffmpeg.absolutePath,
+            "-y",
+            "-nostdin",
+            "-hide_banner",
+            "-loglevel", "error",
+            "-i", input.absolutePath,
+            "-vn",
+            "-map_metadata", "-1",
+            "-c:a", "libmp3lame",
+            "-b:a", "192k",
+            output.absolutePath,
+        )
+        val log = StringBuilder()
+        if (!runFfmpegCommand(command, log) || !output.exists() || output.length() == 0L) {
+            throw IOException("FFmpeg could not convert the audio: ${log.toString().takeLast(800)}")
+        }
+    }
+
+    private fun findDownloadedAudio(workDir: File): File? {
+        val files = workDir.listFiles()
+            ?.filter {
+                it.isFile && it.length() > 0L && !it.name.endsWith(".part")
+            }
+            ?.filter { it.name != "video.info.json" }
+            ?: return null
+
+        val audio = files
+            .filter { it.extension.lowercase() in AUDIO_EXTENSIONS }
+            .maxByOrNull { it.length() }
+        if (audio != null) return audio
+
+        // The site only had a muxed file; FFmpeg will pull the sound out of it.
+        return files
+            .filter { it.extension.lowercase() in VIDEO_EXTENSIONS }
+            .maxByOrNull { it.length() }
+    }
+
+    // ---------------------------------------------------------------------
+    // Probing formats before the download
+    // ---------------------------------------------------------------------
+
+    /** Reads title, duration and per-quality sizes without downloading the video. */
+    fun probe(rawUrl: String): Probe {
+        if (isBusy()) throw IllegalStateException("A download is already running.")
+        if (!probeBusy.compareAndSet(false, true)) {
+            throw IllegalStateException("A link check is already running.")
+        }
+        try {
+            return probeLink(rawUrl)
+        } finally {
+            probeBusy.set(false)
+        }
+    }
+
+    private fun probeLink(rawUrl: String): Probe {
+        val url = normalizeUrl(rawUrl)
+        val request = YoutubeDLRequest(url)
+        request.addOption("-J")
+        request.addOption("--no-playlist")
+        request.addOption("--no-warnings")
+        request.addOption("--socket-timeout", "20")
+        request.addOption("--user-agent", USER_AGENT)
+
+        if (isInstagram(url)) {
+            request.addOption("--add-header", "Referer:https://www.instagram.com/")
+        } else if (isFacebook(url)) {
+            request.addOption("--add-header", "Referer:https://www.facebook.com/")
+        }
+        val cookies = cookiesFile()
+        if (cookies.exists() && cookies.length() > 0L) {
+            request.addOption("--cookies", cookies.absolutePath)
+        }
+
+        val response = YoutubeDL.getInstance().execute(request)
+        val json = JSONObject(response.out)
+        val durationSeconds = json.optDouble("duration", 0.0)
+        val formats = json.optJSONArray("formats")
+
+        var bestAudioSize = 0L
+        var bestAudioRate = -1.0
+        // height -> (bytes, isMp4, alreadyHasAudio)
+        val byHeight = LinkedHashMap<Int, Triple<Long, Boolean, Boolean>>()
+
+        if (formats != null) {
+            for (index in 0 until formats.length()) {
+                val format = formats.optJSONObject(index) ?: continue
+                val vcodec = format.optString("vcodec", "none")
+                val acodec = format.optString("acodec", "none")
+                val size = formatSize(format, durationSeconds)
+                val height = format.optInt("height", 0)
+
+                if (vcodec == "none" && acodec != "none") {
+                    val rate = format.optDouble("abr", 0.0)
+                    if (rate >= bestAudioRate) {
+                        bestAudioRate = rate
+                        bestAudioSize = size
+                    }
+                    continue
+                }
+                if (vcodec == "none" || height <= 0 || height > 1080) continue
+
+                // Prefer H.264/MP4 because that is what WhatsApp accepts.
+                val isMp4 = format.optString("ext") == "mp4" || vcodec.startsWith("avc")
+                val hasAudio = acodec != "none"
+                val previous = byHeight[height]
+                val better = previous == null ||
+                    (isMp4 && !previous.second) ||
+                    (isMp4 == previous.second && size > previous.first)
+                if (better) byHeight[height] = Triple(size, isMp4, hasAudio)
+            }
+        }
+
+        val options = mutableListOf<ProbeOption>()
+        byHeight.entries
+            .sortedByDescending { it.key }
+            .take(5)
+            .forEach { (height, value) ->
+                val total = when {
+                    value.first <= 0L -> 0L
+                    value.third -> value.first
+                    else -> value.first + bestAudioSize
+                }
+                options += ProbeOption(height = height, sizeBytes = total, audio = false)
+            }
+        if (bestAudioSize > 0L) {
+            options += ProbeOption(height = 0, sizeBytes = bestAudioSize, audio = true)
+        }
+        if (options.none { !it.audio }) {
+            options.add(0, ProbeOption(height = 0, sizeBytes = 0, audio = false))
+        }
+
+        return Probe(
+            title = json.optString("title").takeIf { it.isNotBlank() } ?: urlTitle(url),
+            durationMs = (durationSeconds * 1000).roundToLong(),
+            thumbnailUrl = json.optString("thumbnail").takeIf { it.isNotBlank() },
+            options = options,
+        )
+    }
+
+    private fun formatSize(format: JSONObject, durationSeconds: Double): Long {
+        val exact = format.optLong("filesize", 0L)
+        if (exact > 0L) return exact
+        val approx = format.optLong("filesize_approx", 0L)
+        if (approx > 0L) return approx
+        val tbr = format.optDouble("tbr", 0.0)
+        if (tbr > 0.0 && durationSeconds > 0.0) {
+            return (tbr * 1000.0 / 8.0 * durationSeconds).roundToLong()
+        }
+        return 0L
+    }
+
+    /** Redacted yt-dlp trace used by the diagnostics screen. */
+    fun diagnose(rawUrl: String): String {
+        val url = normalizeUrl(rawUrl)
+        val request = YoutubeDLRequest(url)
+        request.addOption("-v")
+        request.addOption("--simulate")
+        request.addOption("--no-playlist")
+        request.addOption("--no-warnings")
+        request.addOption("--socket-timeout", "20")
+        request.addOption("--user-agent", USER_AGENT)
+        if (isInstagram(url)) {
+            request.addOption("--add-header", "Referer:https://www.instagram.com/")
+        } else if (isFacebook(url)) {
+            request.addOption("--add-header", "Referer:https://www.facebook.com/")
+        }
+        val cookies = cookiesFile()
+        if (cookies.exists() && cookies.length() > 0L) {
+            request.addOption("--cookies", cookies.absolutePath)
+        }
+
+        val response = runCatching { YoutubeDL.getInstance().execute(request) }
+        val body = response.map { "${it.out}\n${it.err}" }
+            .getOrElse { it.message ?: it.toString() }
+        val text = buildString {
+            appendLine("yt-dlp ${runCatching { YoutubeDL.versionName(context) }.getOrNull() ?: "?"}")
+            appendLine("url: $url")
+            appendLine(body.takeLast(14_000))
+        }
+        return redact(text)
+    }
+
+    private fun redact(text: String): String {
+        var clean = text
+        listOf(
+            cookiesFile().absolutePath,
+            context.filesDir.absolutePath,
+            context.cacheDir.absolutePath,
+            context.applicationInfo.nativeLibraryDir,
+        ).forEach { path ->
+            if (path.isNotBlank()) clean = clean.replace(path, "<app>")
+        }
+        return clean
+            .lineSequence()
+            .filterNot { line ->
+                val lower = line.lowercase()
+                lower.contains("cookie:") || lower.contains("set-cookie")
+            }
+            .joinToString("\n")
+    }
+
+    // ---------------------------------------------------------------------
+    // Naming and thumbnails
+    // ---------------------------------------------------------------------
+
+    private fun urlTitle(url: String): String {
+        val id = url.substringAfterLast('/').substringBefore('?').take(40)
+        return id.takeIf { it.isNotBlank() } ?: "Video"
+    }
+
+    private fun sanitizeName(raw: String): String {
+        val cleaned = raw
+            .replace(Regex("[\\/:*?\"<>|\u0000-\u001F]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .trim('.', ' ')
+            .take(80)
+            .trim()
+        return cleaned.ifBlank { "Save & Send video" }
+    }
+
+    private fun renameWithin(dir: File, file: File, rawTitle: String, extension: String): File {
+        val name = sanitizeName(rawTitle)
+        var candidate = File(dir, "$name.$extension")
+        var counter = 2
+        while (candidate.exists() && candidate != file) {
+            candidate = File(dir, "$name ($counter).$extension")
+            counter += 1
+        }
+        if (candidate == file) return file
+        return if (runCatching { file.renameTo(candidate) }.getOrDefault(false)) candidate else file
+    }
+
+    private fun keepThumbnail(source: File?): File? {
+        if (source == null || !source.exists() || source.length() == 0L) return null
+        val dir = File(context.filesDir, "history").apply { mkdirs() }
+        val extension = source.extension.ifBlank { "jpg" }
+        val target = File(dir, "thumb_${System.currentTimeMillis()}.$extension")
+        val copied = runCatching { source.copyTo(target, overwrite = true) }
+            .getOrDefault(source)
+        runCatching {
+            dir.listFiles()
+                ?.filter { it.isFile && it.name.startsWith("thumb_") }
+                ?.sortedBy { it.lastModified() }
+                ?.dropLast(60)
+                ?.forEach { it.delete() }
+        }
+        return copied
     }
 
     // ---------------------------------------------------------------------
@@ -248,8 +674,10 @@ class Downloader(
         requestId: String,
         rawUrl: String,
         workDir: File,
+        options: Options,
     ): com.yausername.youtubedl_android.YoutubeDLResponse {
         val url = normalizeUrl(rawUrl)
+        val preferredFormat = videoFormat(options.maxHeight)
         val attempts = mutableListOf<Pair<String, YoutubeDLRequest>>()
 
         if (isFacebook(url)) {
@@ -268,7 +696,7 @@ class Downloader(
                 referer = "https://www.facebook.com/",
             )
         } else if (isYouTube(url)) {
-            attempts += "youtube-default" to buildRequest(url, workDir)
+            attempts += "youtube-default" to buildRequest(url, workDir, format = preferredFormat)
             attempts += "youtube-alt" to buildRequest(
                 url,
                 workDir,
@@ -284,7 +712,7 @@ class Downloader(
             )
             attempts += "youtube-fallback" to buildRequest(url, workDir, format = "b")
         } else if (isInstagram(url)) {
-            attempts += "instagram-default" to buildRequest(url, workDir)
+            attempts += "instagram-default" to buildRequest(url, workDir, format = preferredFormat)
             attempts += "instagram-alt" to buildRequest(
                 url,
                 workDir,
@@ -293,12 +721,15 @@ class Downloader(
             )
             attempts += "instagram-fallback" to buildRequest(url, workDir, format = "b")
         } else {
-            attempts += "default" to buildRequest(url, workDir)
+            attempts += "default" to buildRequest(url, workDir, format = preferredFormat)
             attempts += "fallback" to buildRequest(url, workDir, format = "b")
         }
 
+        // "Try another method" skips the client set that just failed.
+        val queue = if (options.alternate && attempts.size > 1) attempts.drop(1) else attempts
+
         var lastError: Throwable? = null
-        attempts.forEachIndexed { index, (label, request) ->
+        queue.forEachIndexed { index, (label, request) ->
             if (cancelled) throw YoutubeDL.CanceledException()
             if (index > 0) {
                 workDir.deleteRecursively()
@@ -379,7 +810,7 @@ class Downloader(
         request.addOption("--restrict-filenames")
         request.addOption("-o", File(workDir, "video.%(ext)s").absolutePath)
 
-        val ua = customUserAgent ?: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        val ua = customUserAgent ?: USER_AGENT
         request.addOption("--user-agent", ua)
 
         if (referer != null) {
@@ -803,7 +1234,43 @@ class Downloader(
             }
         }
 
+        // Reddit share links (reddit.com/r/x/s/AbCdEf) are redirects, not
+        // post URLs. Follow them once so yt-dlp gets something it can parse.
+        if (clean.contains("reddit.com", ignoreCase = true) && clean.contains("/s/")) {
+            val resolved = resolveRedirect(clean)
+            if (resolved != clean) return normalizeUrl(resolved)
+        }
+
         return clean
+    }
+
+    private fun resolveRedirect(rawUrl: String): String {
+        return runCatching {
+            var current = if (rawUrl.startsWith("http", ignoreCase = true)) rawUrl else "https://$rawUrl"
+            for (hop in 0 until 5) {
+                val conn = (java.net.URL(current).openConnection() as java.net.HttpURLConnection).apply {
+                    instanceFollowRedirects = false
+                    requestMethod = "HEAD"
+                    connectTimeout = 4000
+                    readTimeout = 4000
+                    setRequestProperty("User-Agent", USER_AGENT)
+                }
+                conn.connect()
+                val code = conn.responseCode
+                val location = conn.getHeaderField("Location")
+                conn.disconnect()
+                if (code in 300..399 && !location.isNullOrBlank()) {
+                    current = if (location.startsWith("http", ignoreCase = true)) {
+                        location
+                    } else {
+                        java.net.URL(java.net.URL(current), location).toString()
+                    }
+                } else {
+                    return@runCatching current
+                }
+            }
+            current
+        }.getOrDefault(rawUrl)
     }
 
     private fun resolveFacebookUrl(rawUrl: String): String {
@@ -981,6 +1448,15 @@ class Downloader(
         }
     }
 
+    private fun videoFormat(maxHeight: Int): String {
+        if (maxHeight <= 0) return FORMAT
+        val height = maxHeight.coerceIn(144, 1920)
+        return "bv*[height<=$height][vcodec^=avc1]+ba[acodec^=mp4a]/" +
+            "b[height<=$height][ext=mp4]/" +
+            "bv*[height<=$height]+ba/" +
+            "b[height<=$height]/b"
+    }
+
     companion object {
         /** One download at a time even if Android created two activity instances. */
         private val globalBusy = AtomicBoolean(false)
@@ -988,6 +1464,10 @@ class Downloader(
         private val VIDEO_EXTENSIONS = setOf("mp4", "m4v", "mov", "webm", "mkv", "avi")
         private val AUDIO_EXTENSIONS = setOf("m4a", "aac", "opus", "ogg", "mp3", "weba")
         private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp")
+
+        const val USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
         /**
          * Prefer H.264 + AAC (instantly playable by WhatsApp) at up to 1080p

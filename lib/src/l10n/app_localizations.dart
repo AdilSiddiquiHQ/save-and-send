@@ -222,7 +222,7 @@ abstract class AppLocalizations {
   /// No description provided for @downloadHint.
   ///
   /// In en, this message translates to:
-  /// **'MP4 with sound • up to 60 seconds'**
+  /// **'MP4 or MP3 • up to 60 seconds'**
   String get downloadHint;
 
   /// No description provided for @preparing.
@@ -800,6 +800,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t download this video. It may be private, deleted, or the link may be wrong.'**
   String get errGeneric;
+
+  /// No description provided for @recent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent'**
+  String get recent;
+
+  /// No description provided for @recentEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing saved yet'**
+  String get recentEmptyTitle;
+
+  /// No description provided for @recentEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your finished downloads will show up here.'**
+  String get recentEmptyBody;
+
+  /// No description provided for @recentClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear list'**
+  String get recentClear;
+
+  /// No description provided for @recentClearTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear the list?'**
+  String get recentClearTitle;
+
+  /// No description provided for @recentClearBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The files stay in your Gallery.'**
+  String get recentClearBody;
+
+  /// No description provided for @openFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get openFile;
+
+  /// No description provided for @deleteFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get deleteFile;
+
+  /// No description provided for @deleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this file?'**
+  String get deleteTitle;
+
+  /// No description provided for @deleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It also disappears from your Gallery.'**
+  String get deleteBody;
+
+  /// No description provided for @fileDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted.'**
+  String get fileDeleted;
+
+  /// No description provided for @deleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete that file.'**
+  String get deleteFailed;
+
+  /// No description provided for @clipboardFound.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s a link on your clipboard'**
+  String get clipboardFound;
+
+  /// No description provided for @clipboardUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Use it'**
+  String get clipboardUse;
+
+  /// No description provided for @clipboardNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get clipboardNo;
+
+  /// No description provided for @checkingLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the link…'**
+  String get checkingLink;
+
+  /// No description provided for @quality.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality'**
+  String get quality;
+
+  /// No description provided for @qualityBest.
+  ///
+  /// In en, this message translates to:
+  /// **'Best'**
+  String get qualityBest;
+
+  /// No description provided for @qualityAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound only'**
+  String get qualityAudio;
+
+  /// No description provided for @sizeUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Size unknown'**
+  String get sizeUnknown;
+
+  /// No description provided for @audioTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound saved'**
+  String get audioTitle;
+
+  /// No description provided for @audioBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s in your phone\'s Music app.'**
+  String get audioBody;
+
+  /// No description provided for @tryAnotherWay.
+  ///
+  /// In en, this message translates to:
+  /// **'Try another method'**
+  String get tryAnotherWay;
+
+  /// No description provided for @wifiOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi only'**
+  String get wifiOnly;
+
+  /// No description provided for @wifiOnlyHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait for Wi-Fi before big downloads.'**
+  String get wifiOnlyHelp;
+
+  /// No description provided for @wifiNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re on mobile data. Join Wi-Fi or turn Wi-Fi only off.'**
+  String get wifiNeeded;
+
+  /// No description provided for @engineChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloader updates'**
+  String get engineChannel;
+
+  /// No description provided for @engineChannelHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Stable is safer. Nightly fixes sites sooner.'**
+  String get engineChannelHelp;
+
+  /// No description provided for @engineStable.
+  ///
+  /// In en, this message translates to:
+  /// **'Stable'**
+  String get engineStable;
+
+  /// No description provided for @engineNightly.
+  ///
+  /// In en, this message translates to:
+  /// **'Nightly'**
+  String get engineNightly;
+
+  /// No description provided for @diagnostics.
+  ///
+  /// In en, this message translates to:
+  /// **'Troubleshooting'**
+  String get diagnostics;
+
+  /// No description provided for @diagnosticsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a report when a link won\'t download.'**
+  String get diagnosticsHelp;
+
+  /// No description provided for @diagnosticsRun.
+  ///
+  /// In en, this message translates to:
+  /// **'Check link'**
+  String get diagnosticsRun;
+
+  /// No description provided for @diagnosticsCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy report'**
+  String get diagnosticsCopy;
+
+  /// No description provided for @diagnosticsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Report copied.'**
+  String get diagnosticsCopied;
+
+  /// No description provided for @diagnosticsNoLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a link first.'**
+  String get diagnosticsNoLink;
+
+  /// No description provided for @diagnosticsRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get diagnosticsRunning;
 }
 
 class _AppLocalizationsDelegate

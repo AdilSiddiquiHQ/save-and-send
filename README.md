@@ -53,30 +53,40 @@ download engine runs entirely on the phone.
 | | |
 | --- | --- |
 | **Package** | `com.personal.save_and_send` |
-| **Version** | 1.1.1 (4) |
+| **Version** | 1.2.0 (5) |
 | **Devices** | Android 7.0+ (API 24), `arm64-v8a` |
-| **Output** | MP4 / H.264 / AAC-LC, ≤ 1920 px long edge, ≤ 59.5 s |
+| **Output** | MP4 / H.264 / AAC-LC, ≤ 1920 px long edge, ≤ 59.5 s · MP3 192 kbps |
 | **Interface** | English, Urdu, Hindi, Arabic, Bengali · Material 3 · RTL-aware |
-| **Storage** | `Movies/Save & Send/` plus app-private cache |
+| **Storage** | `Movies/Save & Send/`, `Music/Save & Send/`, app-private cache |
 | **Backend** | None |
 
 ## Screenshots
 
 <table>
   <tr>
-    <td align="center" width="25%">
+    <td align="center" width="33%">
       <img src="docs/screenshots/idle.png" width="200" alt="Idle screen with link composer" /><br/>
       <sub><strong>Save a link</strong><br/>Share sheet or paste</sub>
     </td>
-    <td align="center" width="25%">
+    <td align="center" width="33%">
+      <img src="docs/screenshots/probe.png" width="200" alt="Quality and size picker under a pasted link" /><br/>
+      <sub><strong>Pick the size</strong><br/>Quality and MB before download</sub>
+    </td>
+    <td align="center" width="33%">
       <img src="docs/screenshots/result.png" width="200" alt="Result screen with preview and share buttons" /><br/>
       <sub><strong>Ready to send</strong><br/>Preview, Gallery status, actions</sub>
     </td>
-    <td align="center" width="25%">
-      <img src="docs/screenshots/settings.png" width="200" alt="Settings sheet" /><br/>
-      <sub><strong>Settings</strong><br/>Language, engine, cookies</sub>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/history.png" width="200" alt="Recent downloads sheet" /><br/>
+      <sub><strong>Recent</strong><br/>Open, re-send, or delete</sub>
     </td>
-    <td align="center" width="25%">
+    <td align="center" width="33%">
+      <img src="docs/screenshots/settings.png" width="200" alt="Settings sheet" /><br/>
+      <sub><strong>Settings</strong><br/>Language, engine, Wi-Fi, cookies</sub>
+    </td>
+    <td align="center" width="33%">
       <img src="docs/screenshots/urdu.png" width="200" alt="Urdu interface" /><br/>
       <sub><strong>اردو</strong><br/>Full RTL layout and typography</sub>
     </td>
@@ -89,6 +99,17 @@ download engine runs entirely on the phone.
   extracts the first usable link from the shared text, including messy captions.
 - **One composer, no clutter.** Paste a link directly when you do not want to
   leave the app.
+- **Pick before you download.** Once a link is pasted, the app reads its title,
+  length, and estimated size for each quality up to 1080p. On mobile data, take
+  480p instead of guessing.
+- **Sound only.** Save the soundtrack as a 192 kbps MP3 in
+  `Music/Save & Send` — useful for voice notes, reels, and music.
+- **Real filenames.** The Gallery entry carries the video's own title, and
+  WhatsApp shows that name instead of `SaveAndSend_20261028_…`.
+- **Clipboard hand-off.** If a supported link is already copied, the home screen
+  offers it with one tap. It never starts on its own.
+- **Recent shelf.** The last 30 downloads, with a thumbnail, size, and date.
+  Open, re-send, or delete without hunting through the Gallery.
 - **Sound, preserved.** Separate video and audio streams are merged, and the
   output is normalized to H.264 video and AAC-LC audio when the source has
   sound.
@@ -107,7 +128,12 @@ download engine runs entirely on the phone.
   choice is remembered between launches. [Translation notes](docs/TRANSLATIONS.md).
 - **Self-healing engine.** The first launch extracts Python, FFmpeg, and yt-dlp,
   repairs native library links, and keeps the downloader updatable from
-  Settings.
+  Settings. Choose the Stable or Nightly channel, and run a redacted link check
+  when a site stops working.
+- **Wi-Fi only.** Hold big downloads until Wi-Fi is available, with a clear
+  message instead of a silent failure.
+- **Retry differently.** When a link fails, "Try another method" reruns it with
+  a different player client and format ladder.
 - **No background service.** Downloads run while the app is open, with the
   screen kept awake and a clear cancel path.
 
@@ -179,7 +205,7 @@ streams are not supported and are reported as errors.
 ## Install
 
 1. Open the [latest release](https://github.com/AdilSiddiquiHQ/save-and-send/releases/latest)
-   and download `SaveAndSend-v1.1.1-arm64.apk`.
+   and download `SaveAndSend-v1.2.0-arm64.apk`.
 2. Optionally verify the SHA-256 checksum published with the release.
 3. Allow your browser or file manager to install unknown apps, then open the
    APK.
@@ -213,7 +239,7 @@ Copy it to a predictable name before sharing:
 
 ```bash
 cp build/app/outputs/flutter-apk/app-release.apk \
-   SaveAndSend-v1.1.1-arm64.apk
+   SaveAndSend-v1.2.0-arm64.apk
 ```
 
 The repository deliberately keeps only `arm64-v8a`. The Python and FFmpeg

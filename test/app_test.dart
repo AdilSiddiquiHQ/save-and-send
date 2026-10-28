@@ -9,12 +9,14 @@ const _methodChannelName = 'com.personal.save_and_send/native';
 const _eventChannelName = 'com.personal.save_and_send/events';
 
 String? _lastRequestId;
+Map<dynamic, dynamic>? _lastDownloadArgs;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
     _lastRequestId = null;
+    _lastDownloadArgs = null;
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
@@ -35,7 +37,19 @@ void main() {
             };
           case 'download':
             _lastRequestId = call.arguments['requestId'] as String?;
+            _lastDownloadArgs = call.arguments as Map<dynamic, dynamic>?;
             return null;
+          case 'probe':
+            return <String, dynamic>{
+              'title': 'A probed clip',
+              'durationMs': 42000,
+              'thumbnailUrl': null,
+              'options': [
+                {'height': 1080, 'sizeBytes': 80 * 1024 * 1024, 'audio': false},
+                {'height': 720, 'sizeBytes': 34 * 1024 * 1024, 'audio': false},
+                {'height': 0, 'sizeBytes': 4 * 1024 * 1024, 'audio': true},
+              ],
+            };
           case 'engineVersion':
             return '2025.11.12';
           case 'hasCookies':
@@ -139,6 +153,84 @@ void main() {
     expect(find.text('Saved to your Gallery'), findsOneWidget);
     expect(find.text('0:59'), findsOneWidget);
     expect(find.text('5.0 MB'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a link shows sizes and sound-only before downloading',
+      (tester) async {
+    _setPhone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      'https://www.instagram.com/reel/ABC123/',
+    );
+    // The probe waits for typing to stop before it runs.
+    await tester.pump(const Duration(milliseconds: 1000));
+    await tester.pumpAndSettle();
+
+    expect(find.text('A probed clip'), findsOneWidget);
+    expect(find.text('1080p'), findsOneWidget);
+    expect(find.text('720p'), findsOneWidget);
+    expect(find.text('Sound only'), findsOneWidget);
+    expect(find.text('80.0 MB'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.ensureVisible(find.text('Sound only'));
+    await tester.tap(find.text('Sound only'));
+    await tester.pump();
+
+    await tester.ensureVisible(find.text('Download video'));
+    await tester.tap(find.text('Download video'));
+    await tester.pump();
+    await tester.pump();
+
+    final options = _lastDownloadArgs?['options'] as Map<dynamic, dynamic>?;
+    expect(options?['audioOnly'], isTrue);
+    expect(options?['maxHeight'], 0);
+  });
+
+  testWidgets('sound-only result shows the Music card', (tester) async {
+    _setPhone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      'https://youtu.be/abc',
+    );
+    await tester.ensureVisible(find.text('Download video'));
+    await tester.tap(find.text('Download video'));
+    await tester.pump();
+    await tester.pump();
+
+    final id = _lastRequestId;
+    expect(id, isNotNull);
+
+    await _emit({
+      'type': 'done',
+      'requestId': id,
+      'path': '/tmp/save_and_send_test_missing.mp3',
+      'uri': 'content://media/external/audio/media/42',
+      'savedPath': null,
+      'title': 'A saved song',
+      'durationMs': 185000,
+      'width': 0,
+      'height': 0,
+      'hasAudio': true,
+      'kind': 'audio',
+      'thumbnailPath': null,
+      'thumbnailUrl': null,
+      'trimmed': false,
+      'sizeBytes': 4 * 1024 * 1024,
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sound saved'), findsOneWidget);
+    expect(find.text("It's in your phone's Music app."), findsOneWidget);
+    expect(find.text('MP3'), findsOneWidget);
+    expect(find.text('A saved song'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

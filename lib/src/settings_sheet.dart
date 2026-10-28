@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_lite/lucide_icons_lite.dart';
 
 import 'design.dart';
@@ -13,12 +14,14 @@ class SettingsSheet extends StatefulWidget {
     required this.strings,
     required this.language,
     required this.busy,
+    required this.diagnosticUrl,
     required this.onLanguageChanged,
   });
 
   final AppLocalizations strings;
   final String language;
   final bool busy;
+  final String? diagnosticUrl;
   final ValueChanged<String> onLanguageChanged;
 
   @override
@@ -31,6 +34,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
   bool _loading = true;
   bool _updating = false;
   String? _notice;
+  String _channel = 'nightly';
+  bool _wifiOnly = false;
 
   AppLocalizations get s => widget.strings;
 
@@ -44,10 +49,14 @@ class _SettingsSheetState extends State<SettingsSheet> {
     try {
       final version = await NativeBridge.engineVersion();
       final cookies = await NativeBridge.hasCookies();
+      final channel = await NativeBridge.getPref('engine_channel');
+      final wifiOnly = await NativeBridge.getPref('wifi_only');
       if (!mounted) return;
       setState(() {
         _version = version;
         _hasCookies = cookies;
+        _channel = channel == 'stable' ? 'stable' : 'nightly';
+        _wifiOnly = wifiOnly == '1';
         _loading = false;
       });
     } catch (_) {
@@ -73,6 +82,35 @@ class _SettingsSheetState extends State<SettingsSheet> {
       setState(() => _updating = false);
       _message(s.updateFailed);
     }
+  }
+
+  Future<void> _setChannel(String value) async {
+    if (widget.busy || value == _channel) return;
+    setState(() => _channel = value);
+    try {
+      await NativeBridge.setPref('engine_channel', value);
+    } catch (_) {
+      _message(s.saveFailed);
+    }
+  }
+
+  Future<void> _setWifiOnly(bool value) async {
+    setState(() => _wifiOnly = value);
+    try {
+      await NativeBridge.setPref('wifi_only', value ? '1' : '0');
+    } catch (_) {
+      if (mounted) setState(() => _wifiOnly = !value);
+      _message(s.saveFailed);
+    }
+  }
+
+  Future<void> _diagnose() async {
+    final url = widget.diagnosticUrl;
+    if (url == null) {
+      _message(s.diagnosticsNoLink);
+      return;
+    }
+    await showDiagnosticsDialog(context, s, url);
   }
 
   Future<void> _editCookies() async {
@@ -269,6 +307,24 @@ class _SettingsSheetState extends State<SettingsSheet> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 14),
+                      Text(
+                        s.engineChannel,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        s.engineChannelHelp,
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: kMuted, height: 1.4),
+                      ),
+                      const SizedBox(height: 10),
+                      _ChannelPicker(
+                        value: _channel,
+                        stableLabel: s.engineStable,
+                        nightlyLabel: s.engineNightly,
+                        onChanged: widget.busy ? null : _setChannel,
+                      ),
                       const SizedBox(height: 12),
                       DepthButton(
                         tone: DepthTone.secondary,
@@ -286,6 +342,43 @@ class _SettingsSheetState extends State<SettingsSheet> {
                               ?.copyWith(color: kMuted, height: 1.4),
                         ),
                       ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+                SurfaceCard(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+                  child: Row(
+                    children: [
+                      const _SettingsIcon(
+                        icon: LucideIcons.wifi,
+                        color: kGreen,
+                        background: kBrandTint,
+                      ),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              s.wifiOnly,
+                              style: theme.textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              s.wifiOnlyHelp,
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: kMuted, height: 1.4),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Switch(
+                        value: _wifiOnly,
+                        onChanged: _setWifiOnly,
+                      ),
                     ],
                   ),
                 ),
@@ -343,6 +436,53 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         onPressed: _editCookies,
                         minHeight: 50,
                       ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+                SectionLabel(s.diagnostics),
+                const SizedBox(height: 8),
+                SurfaceCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _SettingsIcon(
+                            icon: LucideIcons.stethoscope,
+                            color: kAmber,
+                            background: kAmberTint,
+                          ),
+                          const SizedBox(width: 11),
+                          Expanded(
+                            child: Text(
+                              s.diagnosticsHelp,
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: kMuted, height: 1.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      DepthButton(
+                        tone: DepthTone.secondary,
+                        icon: LucideIcons.stethoscope,
+                        label: s.diagnosticsRun,
+                        onPressed:
+                            widget.diagnosticUrl == null ? null : _diagnose,
+                        minHeight: 50,
+                      ),
+                      if (widget.diagnosticUrl == null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          s.diagnosticsNoLink,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: kMuted, height: 1.4),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -663,6 +803,212 @@ class _CookiesDialogState extends State<_CookiesDialog> {
           onPressed: () => Navigator.of(context).pop(_controller.text),
           child: Text(s.save),
         ),
+      ],
+    );
+  }
+}
+
+/// Stable or nightly yt-dlp, as a two-part switch.
+class _ChannelPicker extends StatelessWidget {
+  const _ChannelPicker({
+    required this.value,
+    required this.stableLabel,
+    required this.nightlyLabel,
+    required this.onChanged,
+  });
+
+  final String value;
+  final String stableLabel;
+  final String nightlyLabel;
+  final ValueChanged<String>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: kSurfaceMuted,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: kLine),
+      ),
+      child: Row(
+        children: [
+          _option(context, 'stable', stableLabel),
+          const SizedBox(width: 4),
+          _option(context, 'nightly', nightlyLabel),
+        ],
+      ),
+    );
+  }
+
+  Widget _option(BuildContext context, String code, String label) {
+    final selected = value == code;
+    return Expanded(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: GestureDetector(
+          onTap: onChanged == null ? null : () => onChanged!(code),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? kSurface : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: selected ? kLine : Colors.transparent,
+              ),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF17221B).withValues(alpha: 0.06),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: selected ? kDeepGreen : kMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Runs a redacted yt-dlp trace and lets the user copy it.
+Future<void> showDiagnosticsDialog(
+  BuildContext context,
+  AppLocalizations strings,
+  String url,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (_) => _DiagnosticsDialog(strings: strings, url: url),
+  );
+}
+
+class _DiagnosticsDialog extends StatefulWidget {
+  const _DiagnosticsDialog({required this.strings, required this.url});
+
+  final AppLocalizations strings;
+  final String url;
+
+  @override
+  State<_DiagnosticsDialog> createState() => _DiagnosticsDialogState();
+}
+
+class _DiagnosticsDialogState extends State<_DiagnosticsDialog> {
+  bool _running = true;
+  bool _copied = false;
+  String _log = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _run();
+  }
+
+  Future<void> _run() async {
+    String log;
+    try {
+      log = await NativeBridge.diagnose(widget.url);
+    } catch (e) {
+      log = e.toString();
+    }
+    if (!mounted) return;
+    setState(() {
+      _log = log;
+      _running = false;
+    });
+  }
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: _log));
+    if (mounted) setState(() => _copied = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.strings;
+    final theme = Theme.of(context);
+    return AlertDialog(
+      scrollable: true,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+      title: Row(
+        children: [
+          const _SettingsIcon(
+            icon: LucideIcons.stethoscope,
+            color: kAmber,
+            background: kAmberTint,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(s.diagnostics, style: theme.textTheme.headlineSmall),
+          ),
+        ],
+      ),
+      content: _running
+          ? Row(
+              children: [
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    s.diagnosticsRunning,
+                    style: theme.textTheme.bodyMedium?.copyWith(color: kMuted),
+                  ),
+                ),
+              ],
+            )
+          : Container(
+              width: double.maxFinite,
+              constraints: const BoxConstraints(maxHeight: 320),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: kSurfaceMuted,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: kLine),
+              ),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  _log,
+                  textDirection: TextDirection.ltr,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                    height: 1.45,
+                    color: kMuted,
+                  ),
+                ),
+              ),
+            ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(s.close),
+        ),
+        if (!_running)
+          FilledButton.icon(
+            onPressed: _copied ? null : _copy,
+            icon: Icon(_copied ? LucideIcons.check : LucideIcons.copy, size: 16),
+            label: Text(_copied ? s.diagnosticsCopied : s.diagnosticsCopy),
+          ),
       ],
     );
   }

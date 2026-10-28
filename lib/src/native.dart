@@ -28,11 +28,75 @@ class NativeBridge {
   static Future<void> download({
     required String url,
     required String requestId,
+    int maxHeight = 0,
+    bool audioOnly = false,
+    bool alternate = false,
   }) {
     return _methods.invokeMethod<void>('download', {
       'url': url,
       'requestId': requestId,
+      'options': {
+        'maxHeight': maxHeight,
+        'audioOnly': audioOnly,
+        'alternate': alternate,
+      },
     });
+  }
+
+  static Future<LinkProbe?> probe(String url) async {
+    final result = await _methods.invokeMapMethod<String, dynamic>(
+      'probe',
+      {'url': url},
+    );
+    return result == null ? null : LinkProbe.fromMap(result);
+  }
+
+  static Future<String> diagnose(String url) async {
+    return await _methods.invokeMethod<String>('diagnose', {'url': url}) ?? '';
+  }
+
+  static Future<bool> isOnWifi() async {
+    return await _methods.invokeMethod<bool>('isOnWifi') ?? false;
+  }
+
+  static Future<String> shareWhatsAppUri(String uri, String mime) async {
+    return await _methods.invokeMethod<String>('shareWhatsAppUri', {
+          'uri': uri,
+          'mime': mime,
+        }) ??
+        'failed';
+  }
+
+  static Future<String> shareStatusUri(String uri, String mime) async {
+    return await _methods.invokeMethod<String>('shareStatusUri', {
+          'uri': uri,
+          'mime': mime,
+        }) ??
+        'failed';
+  }
+
+  static Future<String> shareSystemUri(String uri, String mime) async {
+    return await _methods.invokeMethod<String>('shareSystemUri', {
+          'uri': uri,
+          'mime': mime,
+        }) ??
+        'failed';
+  }
+
+  static Future<bool> openUri(String uri, String mime) async {
+    return await _methods.invokeMethod<bool>('openUri', {
+          'uri': uri,
+          'mime': mime,
+        }) ??
+        false;
+  }
+
+  static Future<bool> deleteUri({String? uri, String? path}) async {
+    return await _methods.invokeMethod<bool>('deleteUri', {
+          'uri': uri,
+          'path': path,
+        }) ??
+        false;
   }
 
   static Future<void> cancel() {

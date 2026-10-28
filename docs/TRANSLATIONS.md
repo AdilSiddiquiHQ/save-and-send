@@ -75,6 +75,11 @@ makes a translation feel machine-made.
 | Status | اسٹیٹس | Status | الحالة | স্ট্যাটাস |
 | downloader | ڈاؤن لوڈر | डाउनलोडर | محرّك التنزيل | ডাউনলোডার |
 | cookies | کوکیز | कुकीज़ | كوكيز | কুকিজ |
+| quality | کوالٹی | क्वालिटी | الجودة | কোয়ালিটি |
+| sound only | صرف آواز | सिर्फ़ आवाज़ | الصوت فقط | শুধু শব্দ |
+| Recent | حالیہ | हाल के | الأخيرة | সাম্প্রতিক |
+| delete | ڈیلیٹ کریں | डिलीट करें | احذف | ডিলিট করুন |
+| Wi-Fi | وائی فائی | वाई-फ़ाई | Wi-Fi | Wi-Fi |
 
 Platform names keep their local spelling: `Instagram` in Hindi/Bengali,
 `إنستغرام` in Arabic, `انسٹاگرام` in Urdu.
@@ -106,6 +111,11 @@ Platform names keep their local spelling: `Instagram` in Hindi/Bengali,
 | Hindi | `hi` | Devanagari | LTR | 1.1.0 | First pass — wants a native read |
 | Arabic | `ar` | Arabic | RTL | 1.1.0 | First pass — wants a native read |
 | Bengali | `bn` | Bengali | LTR | 1.1.0 | First pass — wants a native read |
+
+1.2.0 added 37 strings to every language (quality, sizes, the Recent sheet,
+Wi-Fi only, the engine channel, and the link check). They follow the same voice
+as the existing text, but they are new: the first read-through by a native
+speaker is still the most useful thing anyone can contribute.
 
 If you speak one of the "first pass" languages, open an issue with the string
 you would change and what you would say instead. Small, specific corrections are

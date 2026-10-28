@@ -69,7 +69,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get download => 'نزّل الفيديو';
 
   @override
-  String get downloadHint => 'MP4 مع الصوت • حتى 60 ثانية';
+  String get downloadHint => 'MP4 أو MP3 • حتى 60 ثانية';
 
   @override
   String get preparing => 'جارٍ التحضير…';
@@ -373,4 +373,117 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get errGeneric =>
       'تعذّر تنزيل هذا الفيديو. ربما يكون خاصًا أو محذوفًا أو الرابط خاطئ.';
+
+  @override
+  String get recent => 'الأخيرة';
+
+  @override
+  String get recentEmptyTitle => 'لا شيء محفوظ بعد';
+
+  @override
+  String get recentEmptyBody => 'ستظهر هنا الفيديوهات التي تنزّلها.';
+
+  @override
+  String get recentClear => 'أفرّغ القائمة';
+
+  @override
+  String get recentClearTitle => 'أفرّغ القائمة؟';
+
+  @override
+  String get recentClearBody => 'ستبقى الملفات في المعرض.';
+
+  @override
+  String get openFile => 'افتح';
+
+  @override
+  String get deleteFile => 'احذف';
+
+  @override
+  String get deleteTitle => 'أحذف هذا الملف؟';
+
+  @override
+  String get deleteBody => 'سيُحذف من المعرض أيضًا.';
+
+  @override
+  String get fileDeleted => 'تم الحذف.';
+
+  @override
+  String get deleteFailed => 'تعذّر حذف الملف.';
+
+  @override
+  String get clipboardFound => 'يوجد رابط في الحافظة';
+
+  @override
+  String get clipboardUse => 'استخدمه';
+
+  @override
+  String get clipboardNo => 'ليس الآن';
+
+  @override
+  String get checkingLink => 'نتحقق من الرابط…';
+
+  @override
+  String get quality => 'الجودة';
+
+  @override
+  String get qualityBest => 'الأفضل';
+
+  @override
+  String get qualityAudio => 'الصوت فقط';
+
+  @override
+  String get sizeUnknown => 'الحجم غير معروف';
+
+  @override
+  String get audioTitle => 'تم حفظ الصوت';
+
+  @override
+  String get audioBody => 'تجده في تطبيق الموسيقى على جهازك.';
+
+  @override
+  String get tryAnotherWay => 'جرّب طريقة أخرى';
+
+  @override
+  String get wifiOnly => 'Wi-Fi فقط';
+
+  @override
+  String get wifiOnlyHelp => 'انتظر الاتصال بـ Wi-Fi قبل التنزيلات الكبيرة.';
+
+  @override
+  String get wifiNeeded =>
+      'أنت على بيانات الجوال. اتصل بـ Wi-Fi أو أوقف خيار Wi-Fi فقط.';
+
+  @override
+  String get engineChannel => 'تحديثات محرّك التنزيل';
+
+  @override
+  String get engineChannelHelp =>
+      'المستقر أكثر أمانًا. الليلي يصلح المواقع أسرع.';
+
+  @override
+  String get engineStable => 'مستقر';
+
+  @override
+  String get engineNightly => 'ليلي';
+
+  @override
+  String get diagnostics => 'حل المشاكل';
+
+  @override
+  String get diagnosticsHelp => 'أنشئ تقريرًا عندما لا يُنزَّل الرابط.';
+
+  @override
+  String get diagnosticsRun => 'افحص الرابط';
+
+  @override
+  String get diagnosticsCopy => 'انسخ التقرير';
+
+  @override
+  String get diagnosticsCopied => 'تم نسخ التقرير.';
+
+  @override
+  String get diagnosticsNoLink => 'الصق رابطًا أولًا.';
+
+  @override
+  String get diagnosticsRunning => 'جارٍ الفحص…';
 }
