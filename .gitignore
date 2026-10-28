@@ -1,0 +1,50 @@
+# --- Operating system & editors -------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+
+# --- Flutter & Dart --------------------------------------------------------
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+**/doc/api/
+*.symbols
+*.map.json
+
+# --- Android / Gradle ------------------------------------------------------
+android/.gradle/
+android/local.properties
+android/app/.cxx/
+android/.kotlin/
+android/app/debug/
+android/app/profile/
+android/app/release/
+.android/
+
+# --- Secrets & signing -----------------------------------------------------
+# Never commit a keystore, its passwords, browser cookies, or exported tokens.
+android/key.properties
+key.properties
+*.jks
+*.keystore
+**/cookies.txt
+cookies.txt
+
+# --- Build outputs ---------------------------------------------------------
+*.apk
+*.aab
+*.aar
+dist/
+output/
+
+# --- Logs ------------------------------------------------------------------
+*.log

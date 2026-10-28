@@ -1,0 +1,14 @@
+/.gradle
+/captures/
+/local.properties
+GeneratedPluginRegistrant.java
+.cxx/
+
+# The Gradle wrapper is committed so a clone can build without regenerating it.
+# Keep the wrapper JAR, gradlew, and gradlew.bat in version control.
+
+# Remember to never publicly share your keystore.
+# See https://flutter.dev/to/reference-keystore
+key.properties
+**/*.keystore
+**/*.jks

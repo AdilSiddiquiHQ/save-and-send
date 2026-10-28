@@ -1,0 +1,10 @@
+# Copy this file to `android/key.properties` to sign release builds with
+# your own private keystore. `android/key.properties` is git-ignored.
+#
+# The path may be absolute or relative to `android/app/`.
+# Keep the keystore and this file out of version control and back them up.
+
+storePassword=replace-with-your-store-password
+keyPassword=replace-with-your-key-password
+keyAlias=save-and-send
+storeFile=/absolute/path/to/save-and-send-release.jks
