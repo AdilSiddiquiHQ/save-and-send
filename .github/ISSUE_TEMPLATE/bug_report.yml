@@ -1,0 +1,79 @@
+name: Bug report
+description: Report a reproducible problem with Save & Send.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. Please remove personal
+        links, cookies, and tokens from logs before submitting.
+
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Shown at the bottom of Settings.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: "Pixel 8, Android 15"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Where did the link come from?
+      options:
+        - Instagram
+        - Facebook
+        - YouTube
+        - TikTok
+        - Another site
+        - Not source-specific
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you do, and what happened instead?
+      placeholder: |
+        1. Share a public reel to Save & Send
+        2. Wait for the progress screen
+        3. See error "..."
+    validations:
+      required: true
+
+  - type: input
+    id: error-code
+    attributes:
+      label: Error code (if shown)
+      description: Open "Details" on the error screen and copy the code or message.
+      placeholder: "youtube_block, login, network, ..."
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or details
+      description: Paste only the relevant lines. Remove cookies and personal data.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I am using the latest release.
+          required: true
+        - label: I removed cookies, tokens, and personal links from this report.
+          required: true
+        - label: This is not a security vulnerability (those go through Security Advisories).
+          required: true
