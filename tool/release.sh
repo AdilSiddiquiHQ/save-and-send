@@ -110,7 +110,8 @@ APKSIGNER="$(find "$SDK_TOOLS" -name apksigner -type f 2>/dev/null | sort -V | t
 CERT=""
 if [ -n "$APKSIGNER" ]; then
   CERT="$("$APKSIGNER" verify --print-certs "$APK" |
-    sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
+    sed -n -E 's/^(V[0-9]+ Signer|Signer #1): certificate SHA-256 digest: //p' |
+    head -1)"
   [ -n "$CERT" ] || fail "APK is not signed"
   if ! "$APKSIGNER" verify "$APK" >/dev/null 2>&1; then
     fail "APK signature verification failed"
