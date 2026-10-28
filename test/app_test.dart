@@ -44,6 +44,12 @@ void main() {
           case 'transform':
             _lastTransformArgs = call.arguments as Map<dynamic, dynamic>?;
             return null;
+          case 'tempSize':
+            return 12 * 1024 * 1024;
+          case 'clearTemp':
+            return 12 * 1024 * 1024;
+          case 'frameAt':
+            return null;
           case 'probe':
             return <String, dynamic>{
               'title': 'A probed clip',
@@ -207,6 +213,7 @@ void main() {
     });
     await tester.pump();
     expect(find.text('Preparing for Status…'), findsOneWidget);
+    expect(find.text('FOR STATUS'), findsOneWidget);
 
     await _emit({
       'type': 'transformed',
@@ -343,6 +350,86 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('للحالة'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Status actions that would change nothing are disabled',
+      (tester) async {
+    _setPhone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      'https://www.instagram.com/reel/ABC123/',
+    );
+    await tester.ensureVisible(find.text('Download video'));
+    await tester.tap(find.text('Download video'));
+    await tester.pump();
+    await tester.pump();
+
+    await _emit({
+      'type': 'done',
+      'requestId': _lastRequestId,
+      'path': '/tmp/save_and_send_test_missing.mp4',
+      'title': 'Already ready',
+      'durationMs': 42000,
+      'width': 1080,
+      'height': 1920,
+      'hasAudio': true,
+      'trimmed': false,
+      'sizeBytes': 5 * 1024 * 1024,
+    });
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('For Status'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Already 9:16 — nothing to pad.'), findsOneWidget);
+    expect(find.text('Already under 60 seconds.'), findsOneWidget);
+    expect(find.text('Already 8 MB or less.'), findsOneWidget);
+
+    await tester.tap(find.text('Split into parts'));
+    await tester.pumpAndSettle();
+    expect(_lastTransformArgs, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the card warns that Status tools re-encode', (tester) async {
+    _setPhone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      'https://www.instagram.com/reel/ABC123/',
+    );
+    await tester.ensureVisible(find.text('Download video'));
+    await tester.tap(find.text('Download video'));
+    await tester.pump();
+    await tester.pump();
+
+    await _emit({
+      'type': 'done',
+      'requestId': _lastRequestId,
+      'path': '/tmp/save_and_send_test_missing.mp4',
+      'title': 'A long clip',
+      'durationMs': 65000,
+      'width': 1280,
+      'height': 720,
+      'hasAudio': true,
+      'trimmed': false,
+      'sizeBytes': 12 * 1024 * 1024,
+    });
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('For Status'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'These re-encode the clip, so the picture softens a little each time.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a link shows sizes and sound-only before downloading',
@@ -516,6 +603,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('temporary files can be cleared from settings', (tester) async {
+    _setPhone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(LucideIcons.settings));
+    await tester.pumpAndSettle();
+
+    final sheet = find.byType(SingleChildScrollView).last;
+    await tester.dragUntilVisible(
+      find.text('Temporary files'),
+      sheet,
+      const Offset(0, -220),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('12 MB'), findsOneWidget);
+
+    await tester.tap(find.text('Clear'));
+    await tester.pumpAndSettle();
+    expect(find.text('Clear temporary files?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Clear'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cleared 12 MB.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('settings sheet opens without layout errors', (tester) async {
     _setPhone(tester);
     await tester.pumpWidget(const SaveAndSendApp());
@@ -551,6 +665,17 @@ void main() {
           reason: 'missing ${option.label}',
         );
       }
+
+      // The storage card sits below the fold; scroll it into view so a long
+      // translation cannot overflow silently.
+      final sheet = find.byType(SingleChildScrollView).last;
+      await tester.dragUntilVisible(
+        find.byIcon(LucideIcons.hardDrive),
+        sheet,
+        const Offset(0, -220),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byIcon(LucideIcons.hardDrive), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }

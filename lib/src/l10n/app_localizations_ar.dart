@@ -426,9 +426,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get quality => 'الجودة';
 
   @override
-  String get qualityBest => 'الأفضل';
-
-  @override
   String get qualityAudio => 'الصوت فقط';
 
   @override
@@ -557,4 +554,44 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get parts => 'الأجزاء';
+
+  @override
+  String get reencodeNote =>
+      'هذه الخيارات تعيد ترميز المقطع، لذا تلين الصورة قليلًا في كل مرة.';
+
+  @override
+  String get alreadyFit => 'بمقاس 9:16 بالفعل، لا حاجة للحشو.';
+
+  @override
+  String get alreadyShort => 'أقل من 60 ثانية بالفعل.';
+
+  @override
+  String get alreadySmall => 'حجمه 8 ميغابايت أو أقل بالفعل.';
+
+  @override
+  String get tooShortTrim => 'أقصر من أن يُقص.';
+
+  @override
+  String get storageSection => 'التخزين';
+
+  @override
+  String get tempFiles => 'ملفات مؤقتة';
+
+  @override
+  String get tempFilesHelp =>
+      'نسخ الحالة وإطارات المعاينة في ذاكرة التطبيق المؤقتة. النسخ في المعرض تبقى.';
+
+  @override
+  String get clearTemp => 'امسح';
+
+  @override
+  String get clearTempTitle => 'مسح الملفات المؤقتة؟';
+
+  @override
+  String tempCleared(String size) {
+    return 'تم تحرير $size.';
+  }
+
+  @override
+  String get tempEmpty => 'لا يوجد ما يُمسح.';
 }

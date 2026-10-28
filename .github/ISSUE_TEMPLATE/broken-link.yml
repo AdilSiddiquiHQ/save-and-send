@@ -1,0 +1,91 @@
+name: Broken link
+description: One link fails while others work. This is the report that gets a site fixed.
+title: "[Link]: "
+labels: ["broken link"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks — this is the most useful report we get.
+
+        **Before posting:** open Settings, tap **Run link check** for the same
+        link, and update the downloader engine once. If it still fails, the
+        Details text below is what identifies the site change.
+
+        Public links only. Remove any cookie, token, or private link first.
+
+  - type: input
+    id: url
+    attributes:
+      label: Link
+      description: The exact link you shared or pasted.
+      placeholder: "https://www.instagram.com/reel/..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      options:
+        - Instagram
+        - Facebook
+        - YouTube
+        - TikTok
+        - Another site
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Settings shows it at the bottom, for example "1.3.1 (7)".
+      placeholder: "1.3.1 (7)"
+    validations:
+      required: true
+
+  - type: input
+    id: engine-version
+    attributes:
+      label: Downloader version
+      description: Settings → Downloader updates. The date shown there.
+      placeholder: "2026.10.21"
+
+  - type: dropdown
+    id: engine-updated
+    attributes:
+      label: Did you update the downloader?
+      options:
+        - "Yes, and the link still fails"
+        - "No, not yet"
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details from the error screen
+      description: |
+        Open **Details** on the failed download and paste the whole block. It
+        is already redacted (cookie values, local paths, and headers removed).
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: link-check
+    attributes:
+      label: Run link check output
+      description: Settings → Run link check, then copy the result. Optional but very helpful.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: The link opens in a browser without logging in.
+          required: true
+        - label: I removed cookies, tokens, and private links from this report.
+          required: true

@@ -180,14 +180,14 @@ void main() {
       'requestId': _lastRequestId,
       'path': '/tmp/missing.mp4',
       'title': 'A calm evening by the sea',
-      'durationMs': 59500,
-      'width': 1080,
-      'height': 1920,
+      'durationMs': 65000,
+      'width': 1280,
+      'height': 720,
       'hasAudio': true,
       'thumbnailPath': null,
       'thumbnailUrl': null,
       'trimmed': false,
-      'sizeBytes': 5 * 1024 * 1024,
+      'sizeBytes': 12 * 1024 * 1024,
     });
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('For Status'));

@@ -1,0 +1,26 @@
+version: 2
+updates:
+  # Workflow actions (checkout, flutter-action, upload-artifact, ...).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
+
+  # Android dependencies. The yt-dlp engine itself is not updated here; see
+  # .github/workflows/engine-check.yml and THIRD_PARTY_NOTICES.md.
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "android"
+    ignore:
+      # youtubedl-android bundles Python, FFmpeg, and yt-dlp. Bumping it
+      # changes the APK by tens of MB and needs a device pass first, so it is
+      # a deliberate release decision, not an automated PR.
+      - dependency-name: "io.github.junkfood02.youtubedl-android:*"

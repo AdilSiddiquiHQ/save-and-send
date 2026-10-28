@@ -133,7 +133,6 @@
   "clipboardNo": "अभी नहीं",
   "checkingLink": "लिंक देखा जा रहा है…",
   "quality": "क्वालिटी",
-  "qualityBest": "सबसे अच्छी",
   "qualityAudio": "सिर्फ़ आवाज़",
   "sizeUnknown": "साइज़ पता नहीं",
   "audioTitle": "आवाज़ सेव हो गई",
@@ -175,5 +174,17 @@
   "transformFailed": "ये क्लिप तैयार नहीं हो सकी। फिर कोशिश करें।",
   "transforming": "Status के लिए तैयार हो रहा है…",
   "apply": "लगाएँ",
-  "parts": "हिस्से"
+  "parts": "हिस्से",
+  "reencodeNote": "ये क्लिप फिर से एनकोड करते हैं, इसलिए हर बार तस्वीर थोड़ी नरम पड़ जाती है।",
+  "alreadyFit": "पहले से 9:16 है, भरने की ज़रूरत नहीं।",
+  "alreadyShort": "पहले से 60 सेकंड से कम है।",
+  "alreadySmall": "पहले से 8 MB या कम है।",
+  "tooShortTrim": "काटने के लिए बहुत छोटा है।",
+  "storageSection": "स्टोरेज",
+  "tempFiles": "अस्थायी फ़ाइलें",
+  "tempFilesHelp": "ऐप कैश में Status की कॉपियाँ और प्रीव्यू फ़्रेम। गैलरी की कॉपियाँ बनी रहती हैं।",
+  "clearTemp": "हटाएँ",
+  "clearTempTitle": "अस्थायी फ़ाइलें हटाएँ?",
+  "tempCleared": "{size} खाली हो गया।",
+  "tempEmpty": "हटाने के लिए कुछ नहीं।"
 }

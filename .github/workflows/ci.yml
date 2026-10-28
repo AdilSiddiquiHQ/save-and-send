@@ -12,7 +12,7 @@ jobs:
   analyze-and-test:
     name: Analyze & test
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Check out
@@ -35,3 +35,53 @@ jobs:
         # Golden tests are platform-specific and are kept as local visual
         # references; the behavior and localization tests below run everywhere.
         run: flutter test test/app_test.dart test/widget_test.dart test/l10n_test.dart test/history_test.dart
+
+      - name: Kotlin tests
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest --console=plain
+
+      - name: Translations
+        # Every English key must exist in all five languages, be present in the
+        # generated Dart, and be referenced from lib/src. Catches a string that
+        # was added to an ARB but never reached a screen.
+        run: python3 tool/check_l10n.py
+
+  apk-budget:
+    name: APK size & ABI
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.4"
+          channel: stable
+          cache: true
+
+      - name: Build the release APK
+        run: |
+          flutter pub get
+          flutter build apk --release --target-platform android-arm64
+
+      - name: Check size and ABI
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          BYTES=$(wc -c < "$APK")
+          MIB=$((BYTES / 1024 / 1024))
+          LIMIT=$((68 * 1024 * 1024))
+          echo "APK is ${MIB} MiB (${BYTES} bytes); budget is 68 MiB"
+          if [ "$BYTES" -gt "$LIMIT" ]; then
+            echo "::error::APK is ${MIB} MiB, over the 68 MiB budget"
+            exit 1
+          fi
+
+          ABIS=$(unzip -l "$APK" | grep -o 'lib/[^/]*/' | sort -u)
+          echo "ABIs: ${ABIS:-none}"
+          if [ "$ABIS" != "lib/arm64-v8a/" ]; then
+            echo "::error::Expected only lib/arm64-v8a/, found: ${ABIS:-none}"
+            exit 1
+          fi

@@ -198,7 +198,6 @@
   "clipboardNo": "Not now",
   "checkingLink": "Checking the link…",
   "quality": "Quality",
-  "qualityBest": "Best",
   "qualityAudio": "Sound only",
   "sizeUnknown": "Size unknown",
   "audioTitle": "Sound saved",
@@ -248,5 +247,25 @@
   "transformFailed": "Couldn't prepare this clip. Try again.",
   "transforming": "Preparing for Status…",
   "apply": "Apply",
-  "parts": "Parts"
+  "parts": "Parts",
+  "reencodeNote": "These re-encode the clip, so the picture softens a little each time.",
+  "alreadyFit": "Already 9:16 — nothing to pad.",
+  "alreadyShort": "Already under 60 seconds.",
+  "alreadySmall": "Already 8 MB or less.",
+  "tooShortTrim": "Too short to trim.",
+  "storageSection": "Storage",
+  "tempFiles": "Temporary files",
+  "tempFilesHelp": "Status copies and preview frames in the app cache. The copies in your Gallery stay.",
+  "clearTemp": "Clear",
+  "clearTempTitle": "Clear temporary files?",
+  "tempCleared": "Cleared {size}.",
+  "@tempCleared": {
+    "description": "Confirmation after clearing caches. {size} is already formatted, for example 12.4 MB.",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "tempEmpty": "Nothing to clear."
 }

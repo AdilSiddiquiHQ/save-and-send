@@ -36,6 +36,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   String? _notice;
   String _channel = 'nightly';
   bool _wifiOnly = false;
+  int _tempBytes = 0;
 
   AppLocalizations get s => widget.strings;
 
@@ -51,12 +52,14 @@ class _SettingsSheetState extends State<SettingsSheet> {
       final cookies = await NativeBridge.hasCookies();
       final channel = await NativeBridge.getPref('engine_channel');
       final wifiOnly = await NativeBridge.getPref('wifi_only');
+      final temp = await NativeBridge.tempSize();
       if (!mounted) return;
       setState(() {
         _version = version;
         _hasCookies = cookies;
         _channel = channel == 'stable' ? 'stable' : 'nightly';
         _wifiOnly = wifiOnly == '1';
+        _tempBytes = temp;
         _loading = false;
       });
     } catch (_) {
@@ -140,6 +143,47 @@ class _SettingsSheetState extends State<SettingsSheet> {
     } catch (_) {
       if (mounted) _message(s.saveFailed);
     }
+  }
+
+  Future<void> _clearTemp() async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(s.clearTempTitle),
+          content: Text(s.tempFilesHelp),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(s.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(s.clearTemp),
+            ),
+          ],
+        );
+      },
+    );
+    if (yes != true || !mounted) return;
+
+    try {
+      final freed = await NativeBridge.clearTemp();
+      if (!mounted) return;
+      setState(() => _tempBytes = 0);
+      _message(
+        freed > 0 ? s.tempCleared(_sizeLabel(freed)) : s.tempEmpty,
+      );
+    } catch (_) {
+      if (mounted) _message(s.saveFailed);
+    }
+  }
+
+  String _sizeLabel(int bytes) {
+    if (bytes <= 0) return '0 MB';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
+    final megabytes = bytes / (1024 * 1024);
+    return '${megabytes.toStringAsFixed(megabytes >= 10 ? 0 : 1)} MB';
   }
 
   void _message(String text) {
@@ -435,6 +479,61 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         label: s.addReplace,
                         onPressed: _editCookies,
                         minHeight: 50,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+                SectionLabel(s.storageSection),
+                const SizedBox(height: 8),
+                SurfaceCard(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          const _SettingsIcon(
+                            icon: LucideIcons.hardDrive,
+                            color: kGreen,
+                            background: kBrandTint,
+                          ),
+                          const SizedBox(width: 11),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  s.tempFiles,
+                                  style: theme.textTheme.titleSmall,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _sizeLabel(_tempBytes),
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: kDeepGreen,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        s.tempFilesHelp,
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: kMuted, height: 1.45),
+                      ),
+                      const SizedBox(height: 10),
+                      DepthButton(
+                        tone: DepthTone.secondary,
+                        icon: LucideIcons.trash2,
+                        label: s.clearTemp,
+                        onPressed: _tempBytes > 0 ? _clearTemp : null,
+                        minHeight: 46,
                       ),
                     ],
                   ),

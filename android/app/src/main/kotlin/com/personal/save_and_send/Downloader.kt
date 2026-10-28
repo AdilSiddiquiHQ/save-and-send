@@ -9,7 +9,6 @@ import com.yausername.youtubedl_android.YoutubeDLRequest
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
-import java.util.Locale
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
@@ -133,7 +132,7 @@ class Downloader(
                     waited += 100
                 }
                 if (cancelled) throw YoutubeDL.CanceledException()
-                val result = run(requestId, url, options)
+                val result = withCookies { run(requestId, url, options) }
                 if (cancelled) throw YoutubeDL.CanceledException()
                 emit(
                     mapOf(
@@ -297,15 +296,18 @@ class Downloader(
     ): List<Map<String, Any?>> {
         val root = File(context.cacheDir, "transforms")
         // A second Status action can run on a file from an earlier transform,
-        // so never delete the folder that holds the input.
-        val sourceDir = source.parentFile?.absolutePath
-        root.listFiles()
-            ?.filter { it.isDirectory && it.name != requestId }
-            ?.filter { it.absolutePath != sourceDir }
-            ?.forEach { old -> runCatching { old.deleteRecursively() } }
+        // so never delete the folder that holds the input. Older folders stay
+        // until the cache passes its cap, so previous parts can still be sent.
+        val sourceDir = source.parentFile?.let { if (it.name.isNotBlank()) it.name else null }
+        val keep = buildSet {
+            add(requestId)
+            if (sourceDir != null) add(sourceDir)
+        }
+        TransformPlanner.staleDirs(root.listFiles()?.toList() ?: emptyList(), keep)
+            .forEach { old -> runCatching { old.deleteRecursively() } }
 
         val workDir = File(root, requestId)
-        if (workDir.absolutePath != sourceDir) workDir.deleteRecursively()
+        if (workDir.name != sourceDir) workDir.deleteRecursively()
         if (!workDir.mkdirs() && !workDir.isDirectory) {
             throw DownloadException("storage", "Couldn't create a temporary folder.")
         }
@@ -366,12 +368,7 @@ class Downloader(
     ): File {
         // A blurred zoom of the same frame fills the 9:16 canvas; the untouched
         // picture sits on top. Nothing is cropped.
-        val filter = "[0:v]split=2[bgs][fgs];" +
-            "[bgs]scale=270:480:force_original_aspect_ratio=increase," +
-            "crop=270:480,boxblur=8:2,scale=1080:1920[bg];" +
-            "[fgs]scale=1080:1920:force_original_aspect_ratio=decrease," +
-            "scale=trunc(iw/2)*2:trunc(ih/2)*2[fg];" +
-            "[bg][fg]overlay=(W-w)/2:(H-h)/2,format=yuv420p[v]"
+        val filter = TransformPlanner.fitFilter()
         val raw = File(workDir, "fit.mp4")
         encode(
             requestId = requestId,
@@ -393,8 +390,8 @@ class Downloader(
         title: String,
         info: Inspected,
     ): List<File> {
-        val partMs = 59_500L
-        val count = ((info.durationMs + partMs - 1) / partMs).toInt().coerceAtLeast(1)
+        val partMs = TransformPlanner.PART_MS
+        val count = TransformPlanner.splitCount(info.durationMs)
         val outputs = mutableListOf<File>()
         for (index in 0 until count) {
             if (cancelled) throw YoutubeDL.CanceledException()
@@ -460,9 +457,11 @@ class Downloader(
         val seconds = info.durationMs / 1000.0
         if (seconds <= 0.0) throw DownloadException("processing", "This file can't be read.")
 
-        val totalKbps = (options.targetBytes * 8.0 / seconds / 1000.0).toInt()
-        val audioKbps = if (info.hasAudio) 96 else 0
-        var videoKbps = (totalKbps - audioKbps).coerceIn(220, 6000)
+        var videoKbps = TransformPlanner.compressedVideoKbps(
+            options.targetBytes,
+            info.durationMs,
+            info.hasAudio,
+        )
         val allowance = (options.targetBytes * 1.04).toLong()
 
         var attempt = 0
@@ -479,12 +478,18 @@ class Downloader(
                 progressBase = attempt * 0.5,
                 progressSpan = 0.5,
             )
-            if (raw.length() <= allowance || videoKbps <= 260 || attempt >= 1) {
+            if (
+                raw.length() <= allowance ||
+                videoKbps <= TransformPlanner.MIN_VIDEO_KBPS + 40 ||
+                attempt >= 1
+            ) {
                 return renameWithin(workDir, raw, title, "mp4")
             }
             runCatching { raw.delete() }
             attempt += 1
-            videoKbps = (videoKbps * 0.78).toInt().coerceAtLeast(220)
+            videoKbps = (videoKbps * 0.78)
+                .toInt()
+                .coerceAtLeast(TransformPlanner.MIN_VIDEO_KBPS)
         }
     }
 
@@ -504,57 +509,16 @@ class Downloader(
         val ffmpeg = ffmpegBinary()
             ?: throw IOException("FFmpeg is missing from the installation.")
 
-        val command = mutableListOf(
-            ffmpeg.absolutePath,
-            "-y",
-            "-nostdin",
-            "-hide_banner",
-            "-loglevel", "error",
-            "-progress", "pipe:1",
-            "-nostats",
+        val command = TransformPlanner.encodeCommand(
+            ffmpegPath = ffmpeg.absolutePath,
+            inputPath = input.absolutePath,
+            outputPath = output.absolutePath,
+            hasAudio = info.hasAudio,
+            startMs = startMs,
+            durationMs = durationMs,
+            filter = filter,
+            videoKbps = videoKbps,
         )
-        if (startMs != null && startMs > 0L) {
-            command += listOf("-ss", seconds(startMs))
-        }
-        command += listOf("-i", input.absolutePath)
-        if (durationMs != null) {
-            command += listOf("-t", seconds(durationMs))
-        }
-        if (filter != null) {
-            command += listOf(
-                "-filter_complex", filter,
-                "-map", "[v]",
-                "-map", "0:a:0?",
-            )
-        } else {
-            command += listOf("-map", "0:v:0", "-map", "0:a:0?")
-        }
-
-        if (videoKbps == null) {
-            command += listOf(
-                "-c:v", "libx264",
-                "-preset", "veryfast",
-                "-crf", "23",
-                "-pix_fmt", "yuv420p",
-            )
-        } else {
-            command += listOf(
-                "-c:v", "libx264",
-                "-preset", "veryfast",
-                "-b:v", "${videoKbps}k",
-                "-maxrate", "${videoKbps * 11 / 10}k",
-                "-bufsize", "${videoKbps * 2}k",
-                "-pix_fmt", "yuv420p",
-            )
-        }
-        if (info.hasAudio) {
-            command += listOf(
-                "-c:a", "aac",
-                "-b:a", if (videoKbps == null) "128k" else "96k",
-                "-ac", "2",
-            )
-        }
-        command += listOf("-movflags", "+faststart", output.absolutePath)
 
         val log = StringBuilder()
         val progressDuration = durationMs ?: info.durationMs
@@ -591,9 +555,6 @@ class Downloader(
             }
         }
     }
-
-    private fun seconds(ms: Long): String =
-        String.format(Locale.US, "%.3f", ms / 1000.0)
 
     private fun run(requestId: String, url: String, options: Options): Result {
         // The gallery has the saved copy, so old preview/share files are no
@@ -871,7 +832,7 @@ class Downloader(
             throw IllegalStateException("A link check is already running.")
         }
         try {
-            return probeLink(rawUrl)
+            return withCookies { probeLink(rawUrl) }
         } finally {
             probeBusy.set(false)
         }
@@ -975,7 +936,9 @@ class Downloader(
     }
 
     /** Redacted yt-dlp trace used by the diagnostics screen. */
-    fun diagnose(rawUrl: String): String {
+    fun diagnose(rawUrl: String): String = withCookies { diagnoseLink(rawUrl) }
+
+    private fun diagnoseLink(rawUrl: String): String {
         val url = normalizeUrl(rawUrl)
         val request = YoutubeDLRequest(url)
         request.addOption("-v")
@@ -1590,7 +1553,20 @@ class Downloader(
         return runCatching { JSONObject(file.readText()) }.getOrNull()
     }
 
-    private fun cookiesFile(): File = File(context.filesDir, "cookies.txt")
+    /**
+     * Runs [block] with the cookie jar decrypted into the cache. The plaintext
+     * copy is removed as soon as the block returns, including on failure.
+     */
+    private fun <T> withCookies(block: () -> T): T {
+        CookieStore.materialize(context)
+        return try {
+            block()
+        } finally {
+            CookieStore.release(context)
+        }
+    }
+
+    private fun cookiesFile(): File = CookieStore.cacheFile(context)
 
     private fun isYouTube(url: String): Boolean {
         val lower = url.lowercase()

@@ -133,7 +133,6 @@
   "clipboardNo": "ليس الآن",
   "checkingLink": "نتحقق من الرابط…",
   "quality": "الجودة",
-  "qualityBest": "الأفضل",
   "qualityAudio": "الصوت فقط",
   "sizeUnknown": "الحجم غير معروف",
   "audioTitle": "تم حفظ الصوت",
@@ -175,5 +174,17 @@
   "transformFailed": "تعذّر تجهيز هذا المقطع. حاول مرة أخرى.",
   "transforming": "جارٍ التجهيز للحالة…",
   "apply": "طبّق",
-  "parts": "الأجزاء"
+  "parts": "الأجزاء",
+  "reencodeNote": "هذه الخيارات تعيد ترميز المقطع، لذا تلين الصورة قليلًا في كل مرة.",
+  "alreadyFit": "بمقاس 9:16 بالفعل، لا حاجة للحشو.",
+  "alreadyShort": "أقل من 60 ثانية بالفعل.",
+  "alreadySmall": "حجمه 8 ميغابايت أو أقل بالفعل.",
+  "tooShortTrim": "أقصر من أن يُقص.",
+  "storageSection": "التخزين",
+  "tempFiles": "ملفات مؤقتة",
+  "tempFilesHelp": "نسخ الحالة وإطارات المعاينة في ذاكرة التطبيق المؤقتة. النسخ في المعرض تبقى.",
+  "clearTemp": "امسح",
+  "clearTempTitle": "مسح الملفات المؤقتة؟",
+  "tempCleared": "تم تحرير {size}.",
+  "tempEmpty": "لا يوجد ما يُمسح."
 }

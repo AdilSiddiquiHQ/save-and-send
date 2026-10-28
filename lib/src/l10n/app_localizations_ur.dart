@@ -427,9 +427,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get quality => 'کوالٹی';
 
   @override
-  String get qualityBest => 'بہترین';
-
-  @override
   String get qualityAudio => 'صرف آواز';
 
   @override
@@ -558,4 +555,44 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get parts => 'حصے';
+
+  @override
+  String get reencodeNote =>
+      'یہ کلپ دوبارہ انکوڈ کرتے ہیں، اس لیے ہر بار تصویر تھوڑی نرم ہو جاتی ہے۔';
+
+  @override
+  String get alreadyFit => 'پہلے ہی 9:16 ہے، بھرنے کی ضرورت نہیں۔';
+
+  @override
+  String get alreadyShort => 'پہلے ہی 60 سیکنڈ سے کم ہے۔';
+
+  @override
+  String get alreadySmall => 'پہلے ہی 8 ایم بی یا اس سے کم ہے۔';
+
+  @override
+  String get tooShortTrim => 'کاٹنے کے لیے بہت مختصر ہے۔';
+
+  @override
+  String get storageSection => 'اسٹوریج';
+
+  @override
+  String get tempFiles => 'عارضی فائلیں';
+
+  @override
+  String get tempFilesHelp =>
+      'ایپ کیشے میں موجود اسٹیٹس کاپیاں اور پیش منظر کے فریم۔ گیلری والی کاپیاں برقرار رہتی ہیں۔';
+
+  @override
+  String get clearTemp => 'خالی کریں';
+
+  @override
+  String get clearTempTitle => 'عارضی فائلیں خالی کریں؟';
+
+  @override
+  String tempCleared(String size) {
+    return '$size جگہ خالی ہو گئی۔';
+  }
+
+  @override
+  String get tempEmpty => 'خالی کرنے کے لیے کچھ نہیں۔';
 }

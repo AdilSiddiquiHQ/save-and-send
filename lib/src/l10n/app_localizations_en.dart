@@ -428,9 +428,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quality => 'Quality';
 
   @override
-  String get qualityBest => 'Best';
-
-  @override
   String get qualityAudio => 'Sound only';
 
   @override
@@ -559,4 +556,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get parts => 'Parts';
+
+  @override
+  String get reencodeNote =>
+      'These re-encode the clip, so the picture softens a little each time.';
+
+  @override
+  String get alreadyFit => 'Already 9:16 — nothing to pad.';
+
+  @override
+  String get alreadyShort => 'Already under 60 seconds.';
+
+  @override
+  String get alreadySmall => 'Already 8 MB or less.';
+
+  @override
+  String get tooShortTrim => 'Too short to trim.';
+
+  @override
+  String get storageSection => 'Storage';
+
+  @override
+  String get tempFiles => 'Temporary files';
+
+  @override
+  String get tempFilesHelp =>
+      'Status copies and preview frames in the app cache. The copies in your Gallery stay.';
+
+  @override
+  String get clearTemp => 'Clear';
+
+  @override
+  String get clearTempTitle => 'Clear temporary files?';
+
+  @override
+  String tempCleared(String size) {
+    return 'Cleared $size.';
+  }
+
+  @override
+  String get tempEmpty => 'Nothing to clear.';
 }

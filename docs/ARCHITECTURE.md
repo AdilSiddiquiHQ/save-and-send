@@ -28,6 +28,8 @@ flowchart TB
         subgraph Native["Kotlin / Android"]
             Activity["MainActivity<br/>share intake, Gallery, intents"]
             Downloader["Downloader<br/>yt-dlp + FFmpeg pipeline"]
+            Planner["TransformPlanner<br/>Status math + FFmpeg args"]
+            Cookies["CookieStore<br/>Keystore-encrypted jar"]
             Fixer["NativeLibraryHelper<br/>runtime library repair"]
         end
 
@@ -39,7 +41,7 @@ flowchart TB
 
         MediaStore["MediaStore / Movies"]
         Cache["cacheDir/downloads"]
-        Cookies["filesDir/cookies.txt"]
+        Cache2["cacheDir/transforms + frames"]
     end
 
     Source -->|"ACTION_SEND text/*"| Activity
@@ -194,6 +196,12 @@ deleted before a new download starts. Only the finished `final.mp4`, the
 thumbnail, and `video.info.json` remain after post-processing; the raw download
 is removed.
 
+Status outputs live in `cacheDir/transforms/<requestId>/`. They are kept so a
+part can be re-shared or fed into another tool, but the whole folder set is
+pruned to 250 MB (`TransformPlanner.CACHE_BYTES`) before each transform. The
+oldest folders go first, and the folder that holds the current input is never
+removed — that was a bug in 1.3.0 that `TransformPlannerTest` now covers.
+
 ### 3. Format selection
 
 The default yt-dlp format ladder prefers a playable pair before falling back to
@@ -298,12 +306,19 @@ installers.
 
 | Location | Contents | Lifetime |
 | --- | --- | --- |
-| `cacheDir/downloads/<requestId>/` | Working video, thumbnail, info JSON | Until the next download or cache eviction |
-| `cacheDir/transforms/<requestId>/` | Status-encoded outputs | Until the next transform or cache eviction |
-| `filesDir/cookies.txt` | Optional Netscape cookie file | Until removed in Settings |
+| `cacheDir/downloads/<requestId>/` | Working video, thumbnail, info JSON | Until the next download or cleared in Settings |
+| `cacheDir/transforms/<requestId>/` | Status-encoded outputs | Pruned oldest-first to 250 MB |
+| `cacheDir/frames/` | Trim-preview JPEGs | Until cleared in Settings |
+| `filesDir/cookies.enc` | Optional cookie jar, AES-GCM with a Keystore key | Until removed in Settings |
+| `cacheDir/cookies.txt` | Temporary plaintext jar for yt-dlp | Only during a request |
 | `noBackupFilesDir/youtubedl-android/` | Extracted Python, FFmpeg, yt-dlp | App install (not backed up) |
 | `Movies/Save & Send/` | Finished MP4 copies | Until the user deletes them |
 | SharedPreferences `save_and_send` | Language and `has_run` flag | App data |
+
+Cookies are written to `filesDir/cookies.enc`. During a request they are
+decrypted into `cacheDir/cookies.txt` and deleted in a `finally` block, so a
+crash cannot leave an unlocked jar behind on the next launch. A plaintext
+`cookies.txt` from 1.3.0 or earlier is encrypted and removed on first use.
 
 `android:allowBackup="false"` keeps cookies and app state out of cloud backups.
 The Gallery copy is independent of the app and survives uninstalling.

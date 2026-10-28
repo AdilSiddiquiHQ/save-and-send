@@ -903,12 +903,6 @@ abstract class AppLocalizations {
   /// **'Quality'**
   String get quality;
 
-  /// No description provided for @qualityBest.
-  ///
-  /// In en, this message translates to:
-  /// **'Best'**
-  String get qualityBest;
-
   /// No description provided for @qualityAudio.
   ///
   /// In en, this message translates to:
@@ -1160,6 +1154,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Parts'**
   String get parts;
+
+  /// No description provided for @reencodeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'These re-encode the clip, so the picture softens a little each time.'**
+  String get reencodeNote;
+
+  /// No description provided for @alreadyFit.
+  ///
+  /// In en, this message translates to:
+  /// **'Already 9:16 — nothing to pad.'**
+  String get alreadyFit;
+
+  /// No description provided for @alreadyShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Already under 60 seconds.'**
+  String get alreadyShort;
+
+  /// No description provided for @alreadySmall.
+  ///
+  /// In en, this message translates to:
+  /// **'Already 8 MB or less.'**
+  String get alreadySmall;
+
+  /// No description provided for @tooShortTrim.
+  ///
+  /// In en, this message translates to:
+  /// **'Too short to trim.'**
+  String get tooShortTrim;
+
+  /// No description provided for @storageSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage'**
+  String get storageSection;
+
+  /// No description provided for @tempFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Temporary files'**
+  String get tempFiles;
+
+  /// No description provided for @tempFilesHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Status copies and preview frames in the app cache. The copies in your Gallery stay.'**
+  String get tempFilesHelp;
+
+  /// No description provided for @clearTemp.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clearTemp;
+
+  /// No description provided for @clearTempTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear temporary files?'**
+  String get clearTempTitle;
+
+  /// Confirmation after clearing caches. {size} is already formatted, for example 12.4 MB.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared {size}.'**
+  String tempCleared(String size);
+
+  /// No description provided for @tempEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to clear.'**
+  String get tempEmpty;
 }
 
 class _AppLocalizationsDelegate

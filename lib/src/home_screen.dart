@@ -553,6 +553,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }) async {
     final result = _result;
     if (result == null || _busy || result.path.isEmpty) return;
+    // The card disables these, but a stale result or a direct call should not
+    // start an encode that changes nothing.
+    if (mode == 'fit' && _alreadyNineSixteen(result)) return;
+    if (mode == 'split' && _alreadyShort(result)) return;
+    if (mode == 'compress' && _tooSmallToShrink(result)) return;
     final requestId = DateTime.now().microsecondsSinceEpoch.toString();
     await _disposeVideo();
     if (!mounted) return;
@@ -598,6 +603,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  bool _alreadyNineSixteen(VideoResult result) {
+    if (result.width <= 0 || result.height <= 0) return false;
+    final ratio = result.width / result.height;
+    return (ratio - 9 / 16).abs() < 0.02;
+  }
+
+  bool _alreadyShort(VideoResult result) =>
+      result.durationMs > 0 && result.durationMs <= 59500;
+
+  bool _tooSmallToShrink(VideoResult result) =>
+      result.sizeBytes > 0 && result.sizeBytes <= 8 * 1024 * 1024;
+
   Future<void> _openTrim() async {
     final result = _result;
     if (result == null || result.durationMs < 1000) return;
@@ -606,6 +623,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       builder: (_) => _TrimDialog(
         strings: s,
         durationMs: result.durationMs,
+        path: result.path,
       ),
     );
     if (picked == null || !mounted) return;
@@ -1180,7 +1198,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   String _sizeText(int bytes) {
-    if (bytes <= 0) return '—';
+    if (bytes <= 0) return s.sizeUnknown;
     if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
@@ -1453,7 +1471,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   children: [
                     Expanded(
                       child: Text(
-                        s.progressEyebrow.toUpperCase(),
+                        (transforming ? s.statusTools : s.progressEyebrow)
+                            .toUpperCase(),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: kGreen,
                         ),
@@ -1646,6 +1665,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onSplit: () => _startTransform('split'),
               onTrim: _openTrim,
               onCompress: _openCompress,
+              fitBlocked:
+                  _alreadyNineSixteen(result) ? s.alreadyFit : null,
+              splitBlocked: _alreadyShort(result) ? s.alreadyShort : null,
+              trimBlocked:
+                  result.durationMs > 0 && result.durationMs < 2000
+                      ? s.tooShortTrim
+                      : null,
+              compressBlocked:
+                  _tooSmallToShrink(result) ? s.alreadySmall : null,
             ),
           ],
           const SizedBox(height: 23),
@@ -3391,6 +3419,10 @@ class _StatusToolsCard extends StatelessWidget {
     required this.onSplit,
     required this.onTrim,
     required this.onCompress,
+    this.fitBlocked,
+    this.splitBlocked,
+    this.trimBlocked,
+    this.compressBlocked,
   });
 
   final AppLocalizations strings;
@@ -3398,6 +3430,12 @@ class _StatusToolsCard extends StatelessWidget {
   final VoidCallback onSplit;
   final VoidCallback onTrim;
   final VoidCallback onCompress;
+
+  /// When set, the action would change nothing and the row explains why.
+  final String? fitBlocked;
+  final String? splitBlocked;
+  final String? trimBlocked;
+  final String? compressBlocked;
 
   @override
   Widget build(BuildContext context) {
@@ -3431,6 +3469,30 @@ class _StatusToolsCard extends StatelessWidget {
                         height: 1.4,
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Icon(
+                            LucideIcons.info,
+                            size: 12,
+                            color: kMuted,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            strings.reencodeNote,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: kMuted,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -3442,6 +3504,7 @@ class _StatusToolsCard extends StatelessWidget {
             icon: LucideIcons.rectangleVertical,
             title: strings.fitStatus,
             help: strings.fitStatusHelp,
+            reason: fitBlocked,
             onTap: onFit,
           ),
           const Divider(height: 1),
@@ -3449,6 +3512,7 @@ class _StatusToolsCard extends StatelessWidget {
             icon: LucideIcons.columns2,
             title: strings.splitStatus,
             help: strings.splitStatusHelp,
+            reason: splitBlocked,
             onTap: onSplit,
           ),
           const Divider(height: 1),
@@ -3456,6 +3520,7 @@ class _StatusToolsCard extends StatelessWidget {
             icon: LucideIcons.scissors,
             title: strings.trimVideo,
             help: strings.trimVideoHelp,
+            reason: trimBlocked,
             onTap: onTrim,
           ),
           const Divider(height: 1),
@@ -3463,6 +3528,7 @@ class _StatusToolsCard extends StatelessWidget {
             icon: LucideIcons.fileDown,
             title: strings.compressVideo,
             help: strings.compressVideoHelp,
+            reason: compressBlocked,
             onTap: onCompress,
           ),
         ],
@@ -3477,21 +3543,25 @@ class _ToolRow extends StatelessWidget {
     required this.title,
     required this.help,
     required this.onTap,
+    this.reason,
   });
 
   final IconData icon;
   final String title;
   final String help;
+  final String? reason;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final enabled = reason == null;
     return Semantics(
       button: true,
+      enabled: enabled,
       label: title,
       child: InkWell(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 11),
@@ -3505,17 +3575,26 @@ class _ToolRow extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: kLine),
                 ),
-                child: Icon(icon, size: 16, color: kDeepGreen),
+                child: Icon(
+                  icon,
+                  size: 16,
+                  color: enabled ? kDeepGreen : kMuted,
+                ),
               ),
               const SizedBox(width: 11),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: theme.textTheme.titleSmall),
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: enabled ? kInk : kMuted,
+                      ),
+                    ),
                     const SizedBox(height: 2),
                     Text(
-                      help,
+                      reason ?? help,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: kMuted,
                         height: 1.35,
@@ -3525,14 +3604,21 @@ class _ToolRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              Transform.flip(
-                flipX: Directionality.of(context) == TextDirection.rtl,
-                child: const Icon(
-                  LucideIcons.chevronRight,
+              if (enabled)
+                Transform.flip(
+                  flipX: Directionality.of(context) == TextDirection.rtl,
+                  child: const Icon(
+                    LucideIcons.chevronRight,
+                    size: 16,
+                    color: kMuted,
+                  ),
+                )
+              else
+                const Icon(
+                  LucideIcons.check,
                   size: 16,
-                  color: kMuted,
+                  color: kGreen,
                 ),
-              ),
             ],
           ),
         ),
@@ -3651,10 +3737,15 @@ class _PartsCard extends StatelessWidget {
 }
 
 class _TrimDialog extends StatefulWidget {
-  const _TrimDialog({required this.strings, required this.durationMs});
+  const _TrimDialog({
+    required this.strings,
+    required this.durationMs,
+    required this.path,
+  });
 
   final AppLocalizations strings;
   final int durationMs;
+  final String path;
 
   @override
   State<_TrimDialog> createState() => _TrimDialogState();
@@ -3666,6 +3757,48 @@ class _TrimDialogState extends State<_TrimDialog> {
   late final double _max = widget.durationMs / 1000;
   late double _start = 0;
   late double _end = _max < _maxLength ? _max : _maxLength;
+
+  String? _preview;
+  bool _previewLoading = false;
+  Timer? _previewTimer;
+  int _previewMs = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _schedulePreview(_start);
+  }
+
+  @override
+  void dispose() {
+    _previewTimer?.cancel();
+    super.dispose();
+  }
+
+  void _schedulePreview(double seconds) {
+    _previewTimer?.cancel();
+    _previewTimer = Timer(
+      const Duration(milliseconds: 200),
+      () => _loadPreview((seconds * 1000).round()),
+    );
+  }
+
+  Future<void> _loadPreview(int ms) async {
+    if (widget.path.isEmpty) return;
+    _previewMs = ms;
+    if (mounted) setState(() => _previewLoading = true);
+    String? frame;
+    try {
+      frame = await NativeBridge.frameAt(path: widget.path, timeMs: ms);
+    } catch (_) {
+      frame = null;
+    }
+    if (!mounted || _previewMs != ms) return;
+    setState(() {
+      _preview = frame;
+      _previewLoading = false;
+    });
+  }
 
   String _clock(double seconds) {
     final total = seconds.round();
@@ -3688,6 +3821,31 @@ class _TrimDialogState extends State<_TrimDialog> {
             style: theme.textTheme.bodyMedium?.copyWith(
               color: kMuted,
               height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 12),
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(13),
+              child: Container(
+                color: kSurfaceMuted,
+                child: _preview != null && File(_preview!).existsSync()
+                    ? Image.file(File(_preview!), fit: BoxFit.contain)
+                    : Center(
+                        child: _previewLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(
+                                LucideIcons.film,
+                                size: 22,
+                                color: kMuted,
+                              ),
+                      ),
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -3713,6 +3871,7 @@ class _TrimDialogState extends State<_TrimDialog> {
                 _start = start;
                 _end = end;
               });
+              _schedulePreview(start);
             },
           ),
           Row(

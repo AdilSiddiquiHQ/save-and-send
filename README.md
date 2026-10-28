@@ -28,6 +28,8 @@ or TikTok link into a WhatsApp-ready MP4.</p>
   <a href="docs/TRANSLATIONS.md">Translations</a>
   &nbsp;·&nbsp;
   <a href="CHANGELOG.md">Changelog</a>
+  &nbsp;·&nbsp;
+  <a href="PRIVACY.md">Privacy</a>
 </p>
 
 </div>
@@ -53,7 +55,7 @@ download engine runs entirely on the phone.
 | | |
 | --- | --- |
 | **Package** | `com.personal.save_and_send` |
-| **Version** | 1.3.0 (6) |
+| **Version** | 1.3.1 (7) |
 | **Devices** | Android 7.0+ (API 24), `arm64-v8a` |
 | **Output** | MP4 / H.264 / AAC-LC, ≤ 1920 px long edge, ≤ 59.5 s · MP3 192 kbps |
 | **Interface** | English, Urdu, Hindi, Arabic, Bengali · Material 3 · RTL-aware |
@@ -61,6 +63,10 @@ download engine runs entirely on the phone.
 | **Backend** | None |
 
 ## Screenshots
+
+These images are rendered by the widget test suite at phone size, so they show
+the real layout and strings but not a real device. A photographed set is still
+pending.
 
 <table>
   <tr>
@@ -222,7 +228,7 @@ streams are not supported and are reported as errors.
 ## Install
 
 1. Open the [latest release](https://github.com/AdilSiddiquiHQ/save-and-send/releases/latest)
-   and download `SaveAndSend-v1.3.0-arm64.apk`.
+   and download `SaveAndSend-v1.3.1-arm64.apk`.
 2. Optionally verify the SHA-256 checksum published with the release.
 3. Allow your browser or file manager to install unknown apps, then open the
    APK.
@@ -233,7 +239,44 @@ streams are not supported and are reported as errors.
 > If you previously installed a build signed with a different key, uninstall it
 > first. Android refuses to update an app whose signing certificate changed.
 
+### Upgrading and downgrading
+
+- **Upgrade:** install the new APK over the old one. Gallery files, Recent,
+  language, Wi-Fi preference, and cookies are kept.
+- **Downgrade:** Android refuses an APK with a lower `versionCode`. Uninstall
+  first, which also removes Recent, settings, and cookies. Files already in the
+  Gallery are untouched.
+- **Signing key changed:** Android reports "App not installed" until the old
+  copy is uninstalled.
+
+## Where files live
+
+| What | Path or store | Survives uninstall? |
+| --- | --- | --- |
+| Videos | `Movies/Save & Send/` through MediaStore | Yes |
+| Sound-only MP3s | `Music/Save & Send/` through MediaStore | Yes |
+| Status outputs | Gallery, with the rest of the videos | Yes |
+| Recent list and settings | App-private SharedPreferences | No |
+| Login cookies | `filesDir/cookies.enc`, Keystore-encrypted | No |
+| Working files | `cacheDir/downloads`, `cacheDir/transforms`, `cacheDir/frames` | No |
+
+Settings → **Storage** shows how much the cache is holding and clears it in one
+tap. Clearing it does not touch the Gallery.
+
 ## Build from source
+
+### What you need
+
+| Tool | Version used for the release |
+| --- | --- |
+| Flutter | 3.44.4 (stable), Dart 3.9 |
+| JDK | 17 |
+| Android SDK | platform 36, build-tools 37.0.0 |
+| NDK | the version `flutter.ndkVersion` resolves to (27.x with Flutter 3.44) |
+| Signing | optional `android/key.properties`, see below |
+
+`flutter doctor` should show an accepted Android toolchain. The build does not
+need a connected device.
 
 ```bash
 git clone https://github.com/AdilSiddiquiHQ/save-and-send.git
@@ -256,7 +299,7 @@ Copy it to a predictable name before sharing:
 
 ```bash
 cp build/app/outputs/flutter-apk/app-release.apk \
-   SaveAndSend-v1.3.0-arm64.apk
+   SaveAndSend-v1.3.1-arm64.apk
 ```
 
 The repository deliberately keeps only `arm64-v8a`. The Python and FFmpeg
@@ -336,9 +379,12 @@ Open the gear icon on the home screen.
 
 - **Language** — English, اردو, हिन्दी, العربية, or বাংলা. The choice is stored
   locally and applied before the first frame on the next launch.
-- **YouTube updates** — updates the on-device yt-dlp engine from the nightly
-  channel. Use this when YouTube changes something and downloads start failing.
-  The APK itself does not change.
+- **Downloader updates** — shows the engine version and updates it in place.
+  **Stable** is the safer channel; **Nightly** fixes a broken site sooner. The
+  APK itself does not change, so a site fix does not need a new install. Use
+  this first when a link that worked last week starts failing.
+- **Storage** — shows how much the download cache, Status copies, and preview
+  frames are using, with a one-tap clear. Gallery copies are never touched.
 - **Login cookies** — optional. Paste a Netscape `cookies.txt` file or raw
   `name=value` cookie pairs. The app converts them and stores them in private
   app storage. Use this only for content that genuinely requires a session.
@@ -352,7 +398,7 @@ Save & Send is designed to keep your data on your phone.
 | Data | Where it lives | Leaves the phone? |
 | --- | --- | --- |
 | Downloaded video | App cache, then Gallery | Only when you share it |
-| Login cookies | `filesDir/cookies.txt` | Only to the source site through yt-dlp |
+| Login cookies | `filesDir/cookies.enc`, encrypted with an Android Keystore key | Only to the source site through yt-dlp |
 | Language preference | App-private SharedPreferences | No |
 | Analytics or identifiers | Not collected | No |
 | Accounts | None | No |
@@ -364,13 +410,27 @@ Additional boundaries:
   backups.
 - Shared files are exposed through a non-exported `FileProvider` with
   per-intent read permission. There is no public file server.
-- The app requests `INTERNET`, `ACCESS_NETWORK_STATE`, and `WAKE_LOCK` (the
-  engine keeps the screen on during a download). `WRITE_EXTERNAL_STORAGE` is
-  requested only on Android 7–9, with `maxSdkVersion="28"`. There is no
-  location, contacts, microphone, camera, or notification permission.
+- Cookies are decrypted into `cacheDir/cookies.txt` only while a request runs,
+  and that copy is deleted when it finishes. The key never leaves the Android
+  Keystore. A plaintext `cookies.txt` from an older version is encrypted and
+  removed on first use.
+- Cleartext HTTP is refused at the manifest level, so a future change cannot
+  silently downgrade a download or a thumbnail.
 - No ads, trackers, crash reporters, or analytics SDKs.
 - The downloader talks directly to the source platform. Updating yt-dlp contacts
   the update endpoint configured by youtubedl-android.
+
+### Permissions
+
+| Permission | Why it is there |
+| --- | --- |
+| `INTERNET` | Fetch the page and download the video |
+| `ACCESS_NETWORK_STATE` | Answer "am I on Wi-Fi?" for the Wi-Fi-only setting |
+| `WRITE_EXTERNAL_STORAGE` (`maxSdkVersion="28"`) | Save into the Gallery on Android 7–9; Android 10+ uses MediaStore and needs no permission |
+
+There is no location, contacts, microphone, camera, notification, or
+background-service permission. The screen stays awake during a download with
+`FLAG_KEEP_SCREEN_ON`, which needs no permission.
 
 See [`SECURITY.md`](SECURITY.md) for reporting a vulnerability.
 
@@ -391,6 +451,20 @@ See [`SECURITY.md`](SECURITY.md) for reporting a vulnerability.
 
 If a download fails, open **Details** on the error screen and include the code
 in a bug report. Remove personal links and cookies first.
+
+### Reporting a broken link
+
+If one link fails while others work, that is usually yt-dlp falling behind a
+site change. Useful reports include:
+
+1. The link (public posts only).
+2. The app version from Settings.
+3. The text behind **Details** on the error screen, or the output of
+   **Run link check** in Settings.
+
+The Details text is already redacted: cookie values, local paths, and header
+lines are removed. Paste it into a [new
+issue](https://github.com/AdilSiddiquiHQ/save-and-send/issues/new?template=broken-link.yml).
 
 ## Tech stack
 
@@ -415,6 +489,8 @@ save-and-send/
 │   │   ├── kotlin/com/personal/save_and_send/
 │   │   │   ├── MainActivity.kt        # share intake, Gallery, intents
 │   │   │   ├── Downloader.kt          # yt-dlp + FFmpeg pipeline
+│   │   │   ├── TransformPlanner.kt    # Status math, FFmpeg args, cache cap
+│   │   │   ├── CookieStore.kt         # Keystore-encrypted cookie jar
 │   │   │   └── NativeLibraryHelper.kt # runtime library repair
 │   │   ├── res/raw/ytdlp              # bundled yt-dlp zipapp
 │   │   └── AndroidManifest.xml
@@ -448,7 +524,13 @@ save-and-send/
 │   ├── l10n_test.dart                 # ARB keys, placeholders, copy
 │   ├── visual_test.dart
 │   └── goldens/
-└── tool/make_icons.py
+├── tool/
+│   ├── release.sh                     # build, checksum, tag, publish
+│   ├── check_l10n.py                  # every key exists and reaches the UI
+│   ├── sbom.py                        # per-release CycloneDX SBOM
+│   ├── ytdlp-version.txt              # bundled yt-dlp, checked monthly
+│   └── make_icons.py
+└── .github/workflows/                 # CI, monthly engine check
 ```
 
 ## Testing
@@ -456,6 +538,12 @@ save-and-send/
 ```bash
 # Static analysis
 flutter analyze
+
+# Every ARB key exists, is generated, and is used from lib/src
+python3 tool/check_l10n.py
+
+# Android logic: Status splitting, bitrate budget, cache pruning
+cd android && ./gradlew :app:testDebugUnitTest
 
 # Behavior and widget coverage
 flutter test test/app_test.dart test/widget_test.dart test/l10n_test.dart
@@ -475,7 +563,48 @@ and Lucide fonts, plus the macOS Devanagari and Bengali faces for the language
 picker, which is why they are kept as local visual references rather than run on
 every CI platform.
 
-CI runs `flutter analyze` and the behavior tests on every push and pull request.
+CI runs `flutter analyze`, the behavior tests, the Kotlin tests, the translation
+check, and a release build that must stay under 68 MiB with only
+`arm64-v8a` libraries.
+
+## FAQ
+
+**Why 59.5 seconds and not 60?**
+WhatsApp rejects anything at or over a minute once container overhead is added.
+59.5 s leaves a small margin. **Split into parts** cuts at exactly that length.
+
+**Why 1080p and not 4K?**
+Status recompresses everything to roughly 1080p, so a 4K download costs time,
+battery, and storage for pixels you never see. The picker caps at 1080p on
+purpose.
+
+**Why does the file size differ from the estimate?**
+The picker estimates from the source bitrate. The app re-encodes to H.264/AAC
+and trims to 59.5 s, so the saved file is usually smaller. Treat the number as
+a guide, not a promise.
+
+**Why do the Status tools re-encode?**
+Fit, split, trim, and shrink all write a new H.264 file because that is the only
+way to change the picture, the length, or the size. Each pass softens the image
+a little, which is why the card says so and why actions that would change
+nothing are disabled.
+
+**Why does a link fail when the same site worked yesterday?**
+Sites change their pages constantly. Tap **Update downloader** in Settings
+first. If it still fails, run **Run link check** and send the Details text.
+
+**Why arm64 only?**
+The bundled Python and FFmpeg runtimes are large. Shipping one ABI keeps the APK
+around 68 MB and covers every phone that runs current WhatsApp comfortably.
+
+**Does it work without Google Play Services?**
+Yes. Nothing depends on it. It does need a network connection, because the
+video is fetched when you ask for it.
+
+**Where do I change the quality or get only the sound?**
+Paste a link; the picker appears under the composer with heights, estimated
+sizes, and **Sound only**. The choice is passed to yt-dlp, not applied after the
+download.
 
 ## Limitations
 

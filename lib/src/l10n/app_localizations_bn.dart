@@ -428,9 +428,6 @@ class AppLocalizationsBn extends AppLocalizations {
   String get quality => 'কোয়ালিটি';
 
   @override
-  String get qualityBest => 'সেরা';
-
-  @override
   String get qualityAudio => 'শুধু শব্দ';
 
   @override
@@ -559,4 +556,44 @@ class AppLocalizationsBn extends AppLocalizations {
 
   @override
   String get parts => 'ভাগগুলো';
+
+  @override
+  String get reencodeNote =>
+      'এগুলো ক্লিপটা আবার এনকোড করে, তাই প্রতিবার ছবিটা একটু নরম হয়ে যায়।';
+
+  @override
+  String get alreadyFit => 'আগেই 9:16, ভরাট করার দরকার নেই।';
+
+  @override
+  String get alreadyShort => 'আগেই ৬০ সেকেন্ডের কম।';
+
+  @override
+  String get alreadySmall => 'আগেই ৮ এমবি বা কম।';
+
+  @override
+  String get tooShortTrim => 'কাটার জন্য খুব ছোট।';
+
+  @override
+  String get storageSection => 'স্টোরেজ';
+
+  @override
+  String get tempFiles => 'অস্থায়ী ফাইল';
+
+  @override
+  String get tempFilesHelp =>
+      'অ্যাপ ক্যাশে থাকা স্ট্যাটাসের কপি আর প্রিভিউ ফ্রেম। গ্যালারির কপিগুলো থেকে যায়।';
+
+  @override
+  String get clearTemp => 'মুছুন';
+
+  @override
+  String get clearTempTitle => 'অস্থায়ী ফাইলগুলো মুছবেন?';
+
+  @override
+  String tempCleared(String size) {
+    return '$size খালি হয়েছে।';
+  }
+
+  @override
+  String get tempEmpty => 'মুছতে কিছু নেই।';
 }

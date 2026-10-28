@@ -6,6 +6,54 @@ All notable changes to Save & Send are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.1] — 2026-10-28
+
+### Added
+
+- **Trim preview.** The range slider now shows a frame at the start handle, so
+  the cut is chosen by picture instead of by guessing from the time.
+- **Storage section in Settings.** Shows what downloads, Status copies, and
+  preview frames are using, with a one-tap **Clear**. Gallery copies are never
+  touched.
+- JVM tests for the Status logic: split count, bitrate budget, FFmpeg argument
+  order, and cache pruning (23 tests, no device needed).
+- Release tooling: `tool/release.sh`, a CycloneDX SBOM per release,
+  `docs/RELEASING.md`, issue and pull-request templates, Dependabot for Actions
+  and Gradle, and a monthly yt-dlp check.
+- CI now runs the Kotlin tests, a translation reachability check, and a release
+  build that must stay under 68 MiB with only `arm64-v8a` libraries.
+- `PRIVACY.md`, plus README sections for build prerequisites, permissions,
+  file locations, upgrade and downgrade, broken-link reports, and an FAQ.
+
+### Changed
+
+- Status tools that would change nothing are disabled with a one-line reason:
+  Fit on an already-9:16 clip, Split on a clip under 59.5 s, Trim on a clip
+  under two seconds, and Make smaller on a file already 8 MB or less.
+- The Status card says plainly that every action re-encodes the clip and that
+  the picture softens a little each time.
+- The encoding screen uses the Status wording instead of the download eyebrow
+  and cancel copy.
+- The transform cache is capped at 250 MB instead of growing until the next
+  transform. Oldest outputs are pruned first; the folder holding the current
+  input is preserved.
+- The Kotlin pipeline builds FFmpeg commands through `TransformPlanner`, so the
+  same code is exercised by tests and by the app.
+
+### Fixed
+
+- Applying a second Status tool to an output could delete the folder that held
+  its own input. The source folder is now excluded from pruning and covered by
+  a regression test.
+
+### Security
+
+- Login cookies are encrypted at rest with an AES-GCM key in the Android
+  Keystore (`filesDir/cookies.enc`). The plaintext file exists only in the
+  cache while a request runs.
+- `android:usesCleartextTraffic="false"` and a network security config block
+  plain HTTP, so no future code path can silently downgrade a download.
+
 ## [1.3.0] — 2026-10-28
 
 ### Added

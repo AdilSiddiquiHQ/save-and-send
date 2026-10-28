@@ -5,6 +5,8 @@ import android.content.ClipData
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
 import android.media.MediaScannerConnection
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -358,25 +360,47 @@ class MainActivity : FlutterActivity() {
                         }.getOrNull() ?: "Bundled"
                     )
 
-                    "hasCookies" -> {
-                        val file = cookiesFile()
-                        result.success(file.exists() && file.length() > 0L)
-                    }
+                    "hasCookies" -> result.success(CookieStore.has(this))
 
                     "setCookies" -> {
                         val text = call.argument<String>("text")
                         io.execute {
                             val ok = runCatching {
-                                val file = cookiesFile()
-                                if (text.isNullOrBlank()) {
-                                    if (file.exists()) file.delete()
-                                } else {
-                                    file.parentFile?.mkdirs()
-                                    file.writeText(formatCookies(text))
-                                }
+                                CookieStore.save(
+                                    this,
+                                    text?.takeIf { it.isNotBlank() }?.let { formatCookies(it) },
+                                )
                                 true
                             }.getOrDefault(false)
                             mainHandler.post { result.success(ok) }
+                        }
+                    }
+
+                    "frameAt" -> {
+                        val path = call.argument<String>("path")
+                        val timeMs = (call.argument<Any>("timeMs") as? Number)?.toLong() ?: 0L
+                        if (path.isNullOrBlank()) {
+                            result.error("BAD_ARGS", "Missing file.", null)
+                        } else {
+                            io.execute {
+                                val frame = runCatching { extractFrame(path, timeMs) }
+                                    .getOrNull()
+                                mainHandler.post { result.success(frame?.absolutePath) }
+                            }
+                        }
+                    }
+
+                    "tempSize" -> result.success(tempBytes())
+
+                    "clearTemp" -> {
+                        if (downloader.isBusy()) {
+                            result.error("BUSY", "A download is running.", null)
+                        } else {
+                            io.execute {
+                                val freed = tempBytes()
+                                clearTemp()
+                                mainHandler.post { result.success(freed) }
+                            }
                         }
                     }
 
@@ -434,6 +458,7 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         downloader.cancel()
         io.shutdown()
+        CookieStore.discardCache(this)
         super.onDestroy()
     }
 
@@ -682,7 +707,7 @@ class MainActivity : FlutterActivity() {
                     result.success(
                         mapOf(
                             "version" to version,
-                            "cookies" to cookiesFile().let { it.exists() && it.length() > 0L },
+                            "cookies" to CookieStore.has(applicationContext),
                         )
                     )
                 }
@@ -1027,7 +1052,55 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun cookiesFile(): File = File(filesDir, "cookies.txt")
+    /** A JPEG frame for the trim preview; null when the file cannot be read. */
+    private fun extractFrame(path: String, timeMs: Long): File? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(path)
+            val frame = retriever.getFrameAtTime(
+                timeMs * 1000L,
+                MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
+            ) ?: return null
+            val scale = minOf(1f, 640f / frame.width)
+            val scaled = if (scale < 1f) {
+                Bitmap.createScaledBitmap(
+                    frame,
+                    (frame.width * scale).toInt().coerceAtLeast(1),
+                    (frame.height * scale).toInt().coerceAtLeast(1),
+                    true,
+                )
+            } else {
+                frame
+            }
+            val dir = File(cacheDir, "frames").apply { mkdirs() }
+            val out = File(dir, "frame_${timeMs}_${path.hashCode()}.jpg")
+            out.outputStream().use { stream ->
+                scaled.compress(Bitmap.CompressFormat.JPEG, 82, stream)
+            }
+            if (scaled !== frame) scaled.recycle()
+            frame.recycle()
+            out
+        } catch (e: Throwable) {
+            null
+        } finally {
+            runCatching { retriever.release() }
+        }
+    }
+
+    private fun tempBytes(): Long =
+        listOf("downloads", "transforms", "frames")
+            .map { File(cacheDir, it) }
+            .sumOf { dir ->
+                if (!dir.exists()) 0L
+                else dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+            }
+
+    private fun clearTemp() {
+        listOf("downloads", "transforms", "frames").forEach {
+            runCatching { File(cacheDir, it).deleteRecursively() }
+        }
+        CookieStore.discardCache(this)
+    }
 
     private fun formatCookies(raw: String): String {
         val trimmed = raw.trim()

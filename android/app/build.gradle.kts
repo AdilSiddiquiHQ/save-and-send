@@ -103,6 +103,9 @@ kotlin {
 dependencies {
     implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
     implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
+
+    // Pure JVM tests for the Status planning logic (no Android runtime).
+    testImplementation("junit:junit:4.13.2")
 }
 
 flutter {

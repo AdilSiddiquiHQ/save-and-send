@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Every request this app makes is HTTPS. Refuse plain HTTP so a future
+     change cannot silently downgrade a download or a thumbnail. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

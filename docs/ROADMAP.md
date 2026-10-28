@@ -7,6 +7,16 @@ personal tool and features are added when they earn their maintenance cost.
 Effort is a rough shape, not a schedule: **S** (an afternoon), **M** (a few
 sessions), **L** (a week or more).
 
+## Shipped in 1.3.1
+
+A hardening pass rather than a feature release. Status tools that would change
+nothing are disabled with a reason, the card warns about re-encoding, trim has a
+frame preview, and the transform cache is capped at 250 MB with a clear action
+in Settings. Cookies are encrypted with an Android Keystore key, cleartext HTTP
+is blocked, and the Status pipeline has JVM tests. Release tooling
+(`tool/release.sh`, SBOM, issue templates, Dependabot, monthly engine check) and
+the documentation gaps from the audit are closed.
+
 ## Shipped in 1.3.0
 
 **For Status** sits on the result screen and re-encodes the finished file on the
@@ -30,7 +40,7 @@ recognised sites.
 | **Engine channel picker** | *(Shipped in 1.2.0)* Stable or Nightly for the bundled downloader. | S |
 | **Per-site cookie profiles** | Separate cookie jars for YouTube, Instagram, Facebook, and TikTok instead of one shared file. Logging into one does not disturb the others. | M |
 | **Cookie import from a file** | Pick a `cookies.txt` with the system file picker instead of pasting it. The pasted path stays available. | S |
-| **Encrypted cookie storage** | Wrap the cookie file with an Android Keystore key so a backup or a rooted device cannot read it in plain text. | M |
+| **Encrypted cookie storage** | *(Shipped in 1.3.1)* AES-GCM with an Android Keystore key; plaintext exists only during a request. | M |
 | **Silent-video rescue** | *(Shipped in 1.0.1)* Mux a left-over audio stream back into the video when yt-dlp cannot merge. | S |
 | **Preflight check** | Verify free space, network type, and engine health before starting, with a clear message instead of a mid-download failure. | S |
 | **Retry with a different strategy** | *(Shipped in 1.2.0)* One tap reruns the last link with another player client and format ladder. | S |
@@ -42,13 +52,13 @@ recognised sites.
 | --- | --- | --- |
 | **Download queue** | Share or paste several links and let them run one after another. Currently a second share is held in memory and lost on exit. | M |
 | **Recent downloads list** | *(Shipped in 1.2.0)* Re-share or delete something saved earlier without hunting through Gallery. | M |
-| **Trim editor** | *(Shipped in 1.3.0)* Pick a start and end point on the result screen, capped at 59.5 seconds. | M |
+| **Trim editor** | *(Shipped in 1.3.0, preview in 1.3.1)* Pick a start and end point, capped at 59.5 seconds, with a frame at the handle. | M |
 | **Quality picker** | *(Shipped in 1.2.0)* Heights from 1080p down, with estimated sizes. | S |
 | **Audio-only export** | *(Shipped in 1.2.0 as MP3)* Save the soundtrack for voice notes and music. | S |
 | **Wi-Fi-only downloads** | *(Shipped in 1.2.0)* Refuses to start on mobile data and says why. | S |
 | **Clipboard detection** | *(Shipped in 1.2.0)* Offers the copied link without ever starting on its own. | S |
 | **Duplicate detection** | Warn when the same video was saved before. | S |
-| **Cache size and cleanup** | Show what the working files use and clear them in one tap. | S |
+| **Cache size and cleanup** | *(Shipped in 1.3.1)* Settings → Storage shows the size and clears it; Status output is capped at 250 MB. | S |
 | **Filename control** | *(Shipped in 1.2.0: title)* Still open: timestamp or original name as a preference. | S |
 | **Dark theme and Material You** | The palette is light-only today. Dynamic color on Android 12+. | M |
 | **Quick Settings tile / home widget** | Paste and download without opening the app. | M |

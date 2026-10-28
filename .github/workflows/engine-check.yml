@@ -1,0 +1,78 @@
+name: Engine check
+
+# The in-app updater keeps users on a current yt-dlp, but the version bundled
+# in the APK is the fallback for a fresh install with no network. This checks
+# monthly whether that fallback has gone stale.
+
+on:
+  schedule:
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  ytdlp:
+    name: Compare bundled yt-dlp with upstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Read the latest release
+        id: version
+        run: |
+          latest="$(curl -fsSL https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest |
+            jq -r .tag_name)"
+          current="$(tr -d '[:space:]' < tool/ytdlp-version.txt)"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          if [ "$latest" != "$current" ]; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            echo "Bundled $current, upstream $latest"
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+            echo "Bundled version is current: $current"
+          fi
+
+      - name: Open an issue when it is stale
+        if: steps.version.outputs.stale == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LATEST: ${{ steps.version.outputs.latest }}
+          CURRENT: ${{ steps.version.outputs.current }}
+        run: |
+          open="$(gh issue list --state open --search 'new yt-dlp in:title' \
+            --json number --jq 'length')"
+          if [ "$open" != "0" ]; then
+            echo "An engine update issue is already open."
+            exit 0
+          fi
+
+          body="$(mktemp)"
+          {
+            echo "The bundled yt-dlp is \`$CURRENT\`; upstream is \`$LATEST\`."
+            echo
+            echo "Users with the in-app updater are already fine, but a fresh"
+            echo "install falls back to the bundled copy. When it falls behind,"
+            echo "a site can break on first use and look like an app bug."
+            echo
+            echo "Upstream: https://github.com/yt-dlp/yt-dlp/releases/tag/$LATEST"
+            echo
+            echo "## Checklist"
+            echo
+            echo "- [ ] Bump \`tool/ytdlp-version.txt\`"
+            echo "- [ ] Bump the yt-dlp badge and the extractor row in \`README.md\`"
+            echo "- [ ] Update \`THIRD_PARTY_NOTICES.md\` if the engine version changed"
+            echo "- [ ] If youtubedl-android also ships a new engine, bump it in"
+            echo "      \`android/app/build.gradle.kts\` and run a device pass"
+            echo "- [ ] Release as a patch version"
+          } > "$body"
+
+          gh issue create \
+            --title "New yt-dlp: $LATEST" \
+            --body-file "$body"

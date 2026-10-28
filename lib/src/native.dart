@@ -63,6 +63,27 @@ class NativeBridge {
     });
   }
 
+  /// A JPEG frame from [path] at [timeMs], used by the trim preview.
+  static Future<String?> frameAt({
+    required String path,
+    required int timeMs,
+  }) {
+    return _methods.invokeMethod<String>('frameAt', {
+      'path': path,
+      'timeMs': timeMs,
+    });
+  }
+
+  /// Bytes held by downloads, Status copies, and preview frames.
+  static Future<int> tempSize() async {
+    return await _methods.invokeMethod<int>('tempSize') ?? 0;
+  }
+
+  /// Deletes the cache folders and returns the bytes freed.
+  static Future<int> clearTemp() async {
+    return await _methods.invokeMethod<int>('clearTemp') ?? 0;
+  }
+
   static Future<LinkProbe?> probe(String url) async {
     final result = await _methods.invokeMapMethod<String, dynamic>(
       'probe',

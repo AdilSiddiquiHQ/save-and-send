@@ -426,9 +426,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get quality => 'क्वालिटी';
 
   @override
-  String get qualityBest => 'सबसे अच्छी';
-
-  @override
   String get qualityAudio => 'सिर्फ़ आवाज़';
 
   @override
@@ -557,4 +554,44 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get parts => 'हिस्से';
+
+  @override
+  String get reencodeNote =>
+      'ये क्लिप फिर से एनकोड करते हैं, इसलिए हर बार तस्वीर थोड़ी नरम पड़ जाती है।';
+
+  @override
+  String get alreadyFit => 'पहले से 9:16 है, भरने की ज़रूरत नहीं।';
+
+  @override
+  String get alreadyShort => 'पहले से 60 सेकंड से कम है।';
+
+  @override
+  String get alreadySmall => 'पहले से 8 MB या कम है।';
+
+  @override
+  String get tooShortTrim => 'काटने के लिए बहुत छोटा है।';
+
+  @override
+  String get storageSection => 'स्टोरेज';
+
+  @override
+  String get tempFiles => 'अस्थायी फ़ाइलें';
+
+  @override
+  String get tempFilesHelp =>
+      'ऐप कैश में Status की कॉपियाँ और प्रीव्यू फ़्रेम। गैलरी की कॉपियाँ बनी रहती हैं।';
+
+  @override
+  String get clearTemp => 'हटाएँ';
+
+  @override
+  String get clearTempTitle => 'अस्थायी फ़ाइलें हटाएँ?';
+
+  @override
+  String tempCleared(String size) {
+    return '$size खाली हो गया।';
+  }
+
+  @override
+  String get tempEmpty => 'हटाने के लिए कुछ नहीं।';
 }
