@@ -316,8 +316,10 @@ Additional boundaries:
   backups.
 - Shared files are exposed through a non-exported `FileProvider` with
   per-intent read permission. There is no public file server.
-- The app requests only `INTERNET` and, on Android 7–9,
-  `WRITE_EXTERNAL_STORAGE`.
+- The app requests `INTERNET`, `ACCESS_NETWORK_STATE`, and `WAKE_LOCK` (the
+  engine keeps the screen on during a download). `WRITE_EXTERNAL_STORAGE` is
+  requested only on Android 7–9, with `maxSdkVersion="28"`. There is no
+  location, contacts, microphone, camera, or notification permission.
 - No ads, trackers, crash reporters, or analytics SDKs.
 - The downloader talks directly to the source platform. Updating yt-dlp contacts
   the update endpoint configured by youtubedl-android.
