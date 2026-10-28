@@ -85,8 +85,9 @@ download engine runs entirely on the phone.
   extracts the first usable link from the shared text, including messy captions.
 - **One composer, no clutter.** Paste a link directly when you do not want to
   leave the app.
-- **Sound, guaranteed.** Separate video and audio streams are merged, and the
-  output is normalized to H.264 video and AAC-LC audio.
+- **Sound, preserved.** Separate video and audio streams are merged, and the
+  output is normalized to H.264 video and AAC-LC audio when the source has
+  sound.
 - **WhatsApp-safe output.** Videos longer than 59.5 seconds are trimmed to the
   first 59.5 seconds, and the MP4 is written with `+faststart` so it plays
   immediately when shared.
@@ -95,8 +96,8 @@ download engine runs entirely on the phone.
   result screen offers a retry.
 - **Three share paths.** Send directly to WhatsApp, post to Status, or hand the
   file to any app through the system share sheet.
-- **Inline preview.** Play, pause, mute, and check duration, size, resolution,
-  and audio before sending.
+- **Inline preview.** Play, pause, mute, and check duration, size, and audio
+  before sending.
 - **Bilingual by design.** English and Urdu, with proper RTL layout and Arabic
   script line heights. The choice is remembered between launches.
 - **Self-healing engine.** The first launch extracts Python, FFmpeg, and yt-dlp,
