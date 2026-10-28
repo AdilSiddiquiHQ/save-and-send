@@ -188,6 +188,52 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Hindi UI renders on a small screen', (tester) async {
+    _setPhone(tester, width: 320, height: 640, textScale: 1.2);
+    await tester.pumpWidget(const SaveAndSendApp(initialLanguage: 'hi'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('कोई भी वीडियो सेव करें।\nएक टैप में भेजें।'),
+      findsOneWidget,
+    );
+    expect(find.text('वीडियो डाउनलोड करें'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Arabic UI mirrors the layout', (tester) async {
+    _setPhone(tester, width: 320, height: 640, textScale: 1.2);
+    await tester.pumpWidget(const SaveAndSendApp(initialLanguage: 'ar'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('احفظ أي فيديو.\nوأرسله بضغطة واحدة.'),
+      findsOneWidget,
+    );
+    expect(find.text('نزّل الفيديو'), findsOneWidget);
+
+    final direction = Directionality.of(tester.element(find.byType(Scaffold)));
+    expect(direction, TextDirection.rtl);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('picking a language in settings updates the UI', (tester) async {
+    _setPhone(tester);
+    await tester.pumpWidget(const SaveAndSendApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(LucideIcons.settings));
+    await tester.pumpAndSettle();
+
+    final hindi = find.text('हिन्दी');
+    await tester.ensureVisible(hindi);
+    await tester.tap(hindi);
+    await tester.pumpAndSettle();
+
+    expect(find.text('वीडियो डाउनलोड करें'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('settings sheet opens without layout errors', (tester) async {
     _setPhone(tester);
     await tester.pumpWidget(const SaveAndSendApp());

@@ -6,6 +6,31 @@ All notable changes to Save & Send are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-10-28
+
+### Added
+
+- Hindi, Arabic, and Bengali interfaces. The app now ships English, Urdu,
+  Hindi, Arabic, and Bengali, selectable in Settings.
+- `gen_l10n` pipeline: one ARB file per language in `lib/l10n/`, a template
+  file, and a test that fails when a key, an empty message, or a `{time}`
+  placeholder is missing.
+- [`docs/TRANSLATIONS.md`](docs/TRANSLATIONS.md) with the tone rules, a per-app
+  glossary, the review status of each language, and the steps for adding one.
+- Arabic layout mirroring is now exercised by a golden screenshot and by an
+  RTL assertion in the widget tests.
+
+### Changed
+
+- The language picker shows every language in its own script and wraps onto a
+  second row instead of being a two-way switch.
+- The URL field and native log text are always left to right, so a URL or an
+  error log is not reordered inside an Arabic or Urdu screen.
+- Arabic-script locales set `letterSpacing` to zero; spacing between letters
+  broke the joins in Arabic and Urdu text.
+- The settings footer reads the version from `lib/src/version.dart` instead of a
+  hardcoded string.
+
 ## [1.0.1] — 2026-10-28
 
 ### Fixed

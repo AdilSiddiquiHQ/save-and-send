@@ -187,6 +187,7 @@ class SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final rightToLeft = Directionality.of(context) == TextDirection.rtl;
     return Row(
       children: [
         Expanded(
@@ -194,7 +195,7 @@ class SectionLabel extends StatelessWidget {
             text.toUpperCase(),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: kMuted,
-                  letterSpacing: 1.15,
+                  letterSpacing: rightToLeft ? 0 : 1.15,
                   fontWeight: FontWeight.w700,
                 ),
           ),

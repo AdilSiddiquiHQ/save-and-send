@@ -2,7 +2,7 @@ name: save_and_send
 description: "Share a video link, download it, and send it on WhatsApp."
 publish_to: 'none'
 
-version: 1.0.1+2
+version: 1.1.0+3
 
 environment:
   sdk: ^3.12.2
@@ -23,6 +23,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
 
   fonts:
     - family: Manrope

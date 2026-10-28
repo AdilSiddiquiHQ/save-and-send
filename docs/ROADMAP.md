@@ -70,14 +70,15 @@ sessions), **L** (a week or more).
 
 ## Languages
 
-The interface is English and Urdu today. Adding a language is mostly
-translation work, but the current hand-written dictionary in `lib/src/i18n.dart`
-does not scale: there is no per-language file, no plural handling, and no way
-for a contributor to send a translation without touching Dart.
+The interface ships English, Urdu, Hindi, Arabic, and Bengali. Adding a language
+is now one ARB file plus one entry in `AppLanguage.all`; it no longer means
+editing Dart. See [`TRANSLATIONS.md`](TRANSLATIONS.md) for the tone rules and the
+glossary.
 
-**Prerequisite (do this first):** move to Flutter's `gen_l10n` with one ARB file
-per language, add `flutter_localizations`, and add a pseudo-locale test so a
-missing key fails CI. After that, a new language is one file plus one test.
+**Done in 1.1.0:** the move to Flutter's `gen_l10n` with one ARB file per
+language, `flutter_localizations`, nullable-safe generated getters, and
+`test/l10n_test.dart`, which fails when a key is missing, empty, or loses a
+placeholder. The validator runs in CI.
 
 ### Tier 1 — highest reach for this app's use case
 
@@ -87,9 +88,9 @@ used there.
 
 | Language | Code | Direction | Notes |
 | --- | --- | --- | --- |
-| Hindi | `hi` | LTR | Largest single audience; Devanagari renders with the system font |
-| Arabic | `ar` | RTL | Already have the Arabic-script font; needs RTL layout QA |
-| Bengali | `bn` | LTR | Very large short-video audience |
+| Hindi | `hi` | LTR | **Shipped in 1.1.0** |
+| Arabic | `ar` | RTL | **Shipped in 1.1.0** |
+| Bengali | `bn` | LTR | **Shipped in 1.1.0** |
 | Indonesian | `id` | LTR | Large TikTok audience |
 | Turkish | `tr` | LTR | Large Instagram/YouTube audience |
 | Spanish | `es` | LTR | Broad, including Latin America |
@@ -140,5 +141,6 @@ Danish (`da`), Finnish (`fi`), Norwegian (`nb`), Hungarian (`hu`), Bulgarian
   the cards use directional padding in places.
 - Language names in the picker should be written in their own script
   (`العربية`, `हिन्दी`, `বাংলা`, `فارسی`), not in English.
-- Persist the choice per install, default to the system language when it is
-  supported, and fall back to English.
+- Arabic-script locales must keep `letterSpacing` at zero; spacing separates the
+  joined letters.
+- Persist the choice per install and fall back to English for an unknown code.

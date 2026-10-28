@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'home_screen.dart';
 import 'i18n.dart';
@@ -16,29 +15,28 @@ class SaveAndSendApp extends StatefulWidget {
 }
 
 class _SaveAndSendAppState extends State<SaveAndSendApp> {
-  late String _lang = widget.initialLanguage;
+  late String _lang = AppLanguage.supports(widget.initialLanguage)
+      ? widget.initialLanguage
+      : 'en';
 
   void _setLanguage(String lang) {
-    if (lang == _lang) return;
+    if (!AppLanguage.supports(lang) || lang == _lang) return;
     setState(() => _lang = lang);
     NativeBridge.setPref('lang', lang).catchError((Object _) {});
   }
 
   @override
   Widget build(BuildContext context) {
+    final locale = Locale(_lang);
     return MaterialApp(
-      title: 'Save & Send',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appName,
       debugShowCheckedModeBanner: false,
       theme: buildTheme(language: _lang),
-      locale: Locale(_lang),
-      supportedLocales: const [Locale('en'), Locale('ur')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       home: HomeScreen(
-        strings: Strings(_lang),
+        strings: lookupAppLocalizations(locale),
         language: _lang,
         onLanguageChanged: _setLanguage,
       ),

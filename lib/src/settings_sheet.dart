@@ -5,6 +5,7 @@ import 'design.dart';
 import 'i18n.dart';
 import 'native.dart';
 import 'theme.dart';
+import 'version.dart';
 
 class SettingsSheet extends StatefulWidget {
   const SettingsSheet({
@@ -15,7 +16,7 @@ class SettingsSheet extends StatefulWidget {
     required this.onLanguageChanged,
   });
 
-  final Strings strings;
+  final AppLocalizations strings;
   final String language;
   final bool busy;
   final ValueChanged<String> onLanguageChanged;
@@ -31,7 +32,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
   bool _updating = false;
   String? _notice;
 
-  Strings get s => widget.strings;
+  AppLocalizations get s => widget.strings;
 
   @override
   void initState() {
@@ -66,11 +67,11 @@ class _SettingsSheetState extends State<SettingsSheet> {
         _version = version ?? _version;
         _updating = false;
       });
-      _message(s.t('updateDone'));
+      _message(s.updateDone);
     } catch (_) {
       if (!mounted) return;
       setState(() => _updating = false);
-      _message(s.t('updateFailed'));
+      _message(s.updateFailed);
     }
   }
 
@@ -92,14 +93,14 @@ class _SettingsSheetState extends State<SettingsSheet> {
       if (!mounted) return;
       setState(() => _hasCookies = text.isNotEmpty && ok);
       if (text.isEmpty) {
-        _message(s.t('cookiesRemoved'));
+        _message(s.cookiesRemoved);
       } else if (ok) {
-        _message(s.t('cookiesSaved'));
+        _message(s.cookiesSaved);
       } else {
-        _message(s.t('saveFailed'));
+        _message(s.saveFailed);
       }
     } catch (_) {
-      if (mounted) _message(s.t('saveFailed'));
+      if (mounted) _message(s.saveFailed);
     }
   }
 
@@ -157,12 +158,12 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            s.t('settings'),
+                            s.settings,
                             style: theme.textTheme.headlineMedium,
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            s.t('settingsSubtitle'),
+                            s.settingsSubtitle,
                             style: theme.textTheme.bodySmall
                                 ?.copyWith(color: kMuted),
                           ),
@@ -173,7 +174,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     SoftIconButton(
                       icon: LucideIcons.x,
                       onPressed: () => Navigator.of(context).pop(),
-                      tooltip: s.t('close'),
+                      tooltip: s.close,
                     ),
                   ],
                 ),
@@ -186,12 +187,10 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 ],
                 const SizedBox(height: 24),
 
-                SectionLabel(s.t('language')),
+                SectionLabel(s.language),
                 const SizedBox(height: 8),
                 _LanguagePicker(
                   value: widget.language,
-                  english: s.t('english'),
-                  urdu: s.t('urdu'),
                   onChanged: (lang) {
                     widget.onLanguageChanged(lang);
                     Navigator.of(context).pop();
@@ -199,12 +198,12 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 ),
                 const SizedBox(height: 7),
                 Text(
-                  s.t('languageHelp'),
+                  s.languageHelp,
                   style: theme.textTheme.bodySmall?.copyWith(color: kMuted),
                 ),
 
                 const SizedBox(height: 24),
-                SectionLabel(s.t('downloader')),
+                SectionLabel(s.downloader),
                 const SizedBox(height: 8),
                 SurfaceCard(
                   padding: const EdgeInsets.all(16),
@@ -225,12 +224,12 @@ class _SettingsSheetState extends State<SettingsSheet> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  s.t('engineUpdates'),
+                                  s.engineUpdates,
                                   style: theme.textTheme.titleMedium,
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  s.t('downloaderHelp'),
+                                  s.downloaderHelp,
                                   style: theme.textTheme.bodySmall
                                       ?.copyWith(color: kMuted, height: 1.4),
                                 ),
@@ -252,7 +251,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                         child: Row(
                           children: [
                             Text(
-                              s.t('version'),
+                              s.version,
                               style: theme.textTheme.bodySmall
                                   ?.copyWith(color: kMuted),
                             ),
@@ -271,7 +270,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                       DepthButton(
                         tone: DepthTone.secondary,
                         icon: LucideIcons.refreshCw,
-                        label: _updating ? s.t('updating') : s.t('update'),
+                        label: _updating ? s.updating : s.update,
                         busy: _updating,
                         onPressed: _loading || widget.busy ? null : _update,
                         minHeight: 52,
@@ -279,7 +278,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                       if (widget.busy) ...[
                         const SizedBox(height: 8),
                         Text(
-                          s.t('busy'),
+                          s.busy,
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: kMuted, height: 1.4),
                         ),
@@ -289,7 +288,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 ),
 
                 const SizedBox(height: 24),
-                SectionLabel(s.t('loginCookies')),
+                SectionLabel(s.loginCookies),
                 const SizedBox(height: 8),
                 SurfaceCard(
                   padding: const EdgeInsets.all(16),
@@ -308,8 +307,8 @@ class _SettingsSheetState extends State<SettingsSheet> {
                           Expanded(
                             child: Text(
                               _hasCookies
-                                  ? s.t('cookiesAdded')
-                                  : s.t('cookiesNotAdded'),
+                                  ? s.cookiesAdded
+                                  : s.cookiesNotAdded,
                               style: theme.textTheme.titleMedium,
                             ),
                           ),
@@ -329,7 +328,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        s.t('cookiesHelp'),
+                        s.cookiesHelp,
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: kMuted, height: 1.5),
                       ),
@@ -337,7 +336,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                       DepthButton(
                         tone: DepthTone.secondary,
                         icon: LucideIcons.squarePen,
-                        label: s.t('addReplace'),
+                        label: s.addReplace,
                         onPressed: _editCookies,
                         minHeight: 50,
                       ),
@@ -346,7 +345,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 ),
 
                 const SizedBox(height: 24),
-                SectionLabel(s.t('howTo')),
+                SectionLabel(s.howTo),
                 const SizedBox(height: 8),
                 SurfaceCard(
                   padding: const EdgeInsets.symmetric(
@@ -355,20 +354,20 @@ class _SettingsSheetState extends State<SettingsSheet> {
                   ),
                   child: Column(
                     children: [
-                      _MiniStep(number: '01', text: s.t('step1Body')),
+                      _MiniStep(number: '01', text: s.step1Body),
                       const Divider(),
-                      _MiniStep(number: '02', text: s.t('step2Body')),
+                      _MiniStep(number: '02', text: s.step2Body),
                       const Divider(),
-                      _MiniStep(number: '03', text: s.t('step3Body')),
+                      _MiniStep(number: '03', text: s.step3Body),
                     ],
                   ),
                 ),
 
                 const SizedBox(height: 24),
-                SectionLabel(s.t('about')),
+                SectionLabel(s.about),
                 const SizedBox(height: 8),
                 Text(
-                  s.t('aboutBody'),
+                  s.aboutBody,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: kMuted,
                     height: 1.5,
@@ -380,7 +379,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     const BrandMark(size: 22),
                     const SizedBox(width: 7),
                     Text(
-                      '${s.t('personalNote')}  •  v1.0.0',
+                      '${s.personalNote}  •  v$kAppVersion',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: kMuted,
                         letterSpacing: 0.15,
@@ -391,7 +390,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 const SizedBox(height: 22),
                 DepthButton(
                   icon: LucideIcons.check,
-                  label: s.t('close'),
+                  label: s.close,
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -429,16 +428,9 @@ class _SettingsIcon extends StatelessWidget {
 }
 
 class _LanguagePicker extends StatelessWidget {
-  const _LanguagePicker({
-    required this.value,
-    required this.english,
-    required this.urdu,
-    required this.onChanged,
-  });
+  const _LanguagePicker({required this.value, required this.onChanged});
 
   final String value;
-  final String english;
-  final String urdu;
   final ValueChanged<String> onChanged;
 
   @override
@@ -450,23 +442,16 @@ class _LanguagePicker extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: kLine),
       ),
-      child: Row(
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
         children: [
-          Expanded(
-            child: _LanguageOption(
-              label: english,
-              selected: value == 'en',
-              onTap: () => onChanged('en'),
+          for (final language in AppLanguage.all)
+            _LanguageOption(
+              label: language.label,
+              selected: value == language.code,
+              onTap: () => onChanged(language.code),
             ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: _LanguageOption(
-              label: urdu,
-              selected: value == 'ur',
-              onTap: () => onChanged('ur'),
-            ),
-          ),
         ],
       ),
     );
@@ -496,7 +481,7 @@ class _LanguageOption extends StatelessWidget {
           duration: const Duration(milliseconds: 160),
           curve: Curves.easeOutCubic,
           height: 46,
-          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: selected ? kSurface : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
@@ -577,7 +562,7 @@ class _CookiesDialog extends StatefulWidget {
     required this.hasCookies,
   });
 
-  final Strings strings;
+  final AppLocalizations strings;
   final bool hasCookies;
 
   @override
@@ -613,7 +598,7 @@ class _CookiesDialogState extends State<_CookiesDialog> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              s.t('loginCookies'),
+              s.loginCookies,
               style: theme.textTheme.headlineSmall,
             ),
           ),
@@ -624,7 +609,7 @@ class _CookiesDialogState extends State<_CookiesDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            s.t('cookiesHelp'),
+            s.cookiesHelp,
             style: theme.textTheme.bodySmall?.copyWith(
               color: kMuted,
               height: 1.5,
@@ -637,6 +622,7 @@ class _CookiesDialogState extends State<_CookiesDialog> {
             minLines: 5,
             autocorrect: false,
             enableSuggestions: false,
+            textDirection: TextDirection.ltr,
             style: const TextStyle(
               fontFamily: 'monospace',
               fontSize: 12.5,
@@ -652,19 +638,19 @@ class _CookiesDialogState extends State<_CookiesDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(s.t('cancel')),
+          child: Text(s.cancel),
         ),
         if (widget.hasCookies)
           TextButton(
             onPressed: () => Navigator.of(context).pop(''),
             child: Text(
-              s.t('remove'),
+              s.remove,
               style: const TextStyle(color: kRed),
             ),
           ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: Text(s.t('save')),
+          child: Text(s.save),
         ),
       ],
     );

@@ -1,0 +1,184 @@
+{
+  "@@locale": "en",
+  "appName": "Save & Send",
+  "appSubtitle": "Your private video saver",
+  "@appSubtitle": {
+    "description": "One-line description under the app name."
+  },
+  "tagline": "Save any video.\nSend it in one tap.",
+  "@tagline": {
+    "description": "Large hero line on the home screen. The line break is intentional."
+  },
+  "taglineSub": "Paste a link or share one from your favourite app.",
+  "heroEyebrow": "Private & simple",
+  "@heroEyebrow": {
+    "description": "Small uppercase label above the tagline."
+  },
+  "trustPrivate": "Stays on this phone",
+  "@trustPrivate": {
+    "description": "Short privacy badge."
+  },
+  "trustNoAccount": "No sign-in needed",
+  "@trustNoAccount": {
+    "description": "Short privacy badge."
+  },
+  "step1Title": "Share a link",
+  "step1Body": "From Instagram, Facebook, YouTube or TikTok, tap Share and pick this app.",
+  "step2Title": "We download it",
+  "@step2Title": {
+    "description": "The app answers the first step here: we download it for you."
+  },
+  "step2Body": "Video and sound are saved to your Gallery.",
+  "step3Title": "Send it",
+  "step3Body": "One tap for WhatsApp or Status.",
+  "worksWith": "Works with Instagram, Facebook, YouTube, TikTok and more.",
+  "linkLabel": "Video link",
+  "linkHelp": "Paste a link from any app.",
+  "pasteHint": "https://instagram.com/reel/…",
+  "paste": "Paste",
+  "download": "Download video",
+  "downloadHint": "MP4 with sound • up to 60 seconds",
+  "preparing": "Getting ready…",
+  "preparingFirst": "First-time setup…\nThis takes a few seconds.",
+  "downloading": "Downloading video…",
+  "audio": "Downloading sound…",
+  "merging": "Adding sound…",
+  "optimizing": "Making it WhatsApp-ready…",
+  "trimming": "Keeping the first 60 seconds…",
+  "retrying": "Trying another way…",
+  "saving": "Saving to your Gallery…",
+  "progressEyebrow": "Downloading",
+  "progressHelp": "Keep this screen open while it downloads. It only takes a moment.",
+  "cancel": "Cancel",
+  "cancelTitle": "Stop this download?",
+  "cancelBody": "The video will not be saved.",
+  "keepDownloading": "Keep downloading",
+  "stop": "Stop",
+  "readyTitle": "Ready to send!",
+  "readySubtitle": "Your video is saved and ready.",
+  "savedGallery": "Saved to your Gallery",
+  "notSavedGallery": "Couldn't save to Gallery",
+  "saveGallery": "Save to Gallery",
+  "sound": "With sound",
+  "@sound": {
+    "description": "Badge meaning the saved video has an audio track."
+  },
+  "noSound": "No sound in this video",
+  "@noSound": {
+    "description": "Badge meaning the video has no audio track."
+  },
+  "trimmedNote": "The first 60 seconds were kept for Status.",
+  "@trimmedNote": {
+    "description": "Note shown when the clip was cut to fit Status."
+  },
+  "sendSection": "Send it",
+  "sendHelp": "Choose where it should go.",
+  "sendWhatsApp": "Send on WhatsApp",
+  "sendStatus": "Post to Status",
+  "moreApps": "More apps",
+  "done": "Done",
+  "errorTitle": "Couldn't download this video",
+  "tryAgain": "Try again",
+  "shareLink": "Share the link instead",
+  "details": "Details",
+  "@details": {
+    "description": "Button that reveals the raw error text."
+  },
+  "hideDetails": "Hide details",
+  "settings": "Settings",
+  "settingsSubtitle": "Make it work the way you like.",
+  "language": "Language",
+  "languageHelp": "Choose the language for buttons and messages.",
+  "downloader": "Downloader",
+  "@downloader": {
+    "description": "Section title for the yt-dlp engine."
+  },
+  "engineUpdates": "YouTube updates",
+  "@engineUpdates": {
+    "description": "Settings row about the bundled YouTube downloader."
+  },
+  "downloaderHelp": "Keep it fresh when YouTube changes.",
+  "version": "Version",
+  "update": "Update downloader",
+  "updating": "Updating…",
+  "updateDone": "Downloader updated.",
+  "updateFailed": "Couldn't update. Check your internet.",
+  "cookiesSaved": "Cookies saved.",
+  "cookiesRemoved": "Cookies removed.",
+  "saveFailed": "Couldn't save.",
+  "timeLeft": "About {time} left",
+  "@timeLeft": {
+    "description": "Download time remaining. {time} is already formatted, for example 0:45.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "loginCookies": "Login cookies",
+  "@loginCookies": {
+    "description": "Section title for pasted browser cookies."
+  },
+  "cookiesAdded": "Added",
+  "@cookiesAdded": {
+    "description": "Status label: cookies are present."
+  },
+  "cookiesNotAdded": "Not added",
+  "@cookiesNotAdded": {
+    "description": "Status label: no cookies saved."
+  },
+  "addReplace": "Add / replace",
+  "cookiesHelp": "Only needed when Instagram, Facebook or YouTube asks for a login. Export a cookies.txt file from a browser and paste it here. It stays on this phone.",
+  "save": "Save",
+  "remove": "Remove",
+  "about": "About",
+  "aboutBody": "A personal app for saving public videos and sending them on WhatsApp. Videos belong to their owners. Please respect copyright.",
+  "howTo": "How to use",
+  "howItWorks": "How it works",
+  "howItWorksHelp": "Three small steps, then it is ready to send.",
+  "close": "Close",
+  "busy": "Please wait for the current download to finish.",
+  "@busy": {
+    "description": "Shown when a download is already running."
+  },
+  "statusFallback": "Your WhatsApp doesn't support direct Status. Pick a contact instead.",
+  "whatsappMissing": "WhatsApp is not installed.",
+  "shareFailed": "Couldn't open the share screen.",
+  "galleryPermission": "Allow storage access to save videos to your Gallery.",
+  "engineErrorTitle": "Couldn't start the downloader",
+  "engineErrorBody": "Try again. If it keeps failing, reinstall the app.",
+  "retrySetup": "Try again",
+  "firstTime": "First-time setup",
+  "personalNote": "Personal use",
+  "statusNote": "Up to 60 seconds for Status",
+  "play": "Play",
+  "pause": "Pause",
+  "mute": "Mute",
+  "unmute": "Sound on",
+  "openSettings": "Open Settings",
+  "errPrivate": "This video is private. Only public videos can be downloaded.",
+  "errLogin": "This video needs a login. Add login cookies in Settings (advanced).",
+  "@errLogin": {
+    "description": "Shown when the video needs an authenticated session."
+  },
+  "errYoutubeBlock": "YouTube is blocking this download. Update the downloader in Settings, or add YouTube cookies, then try again.",
+  "@errYoutubeBlock": {
+    "description": "Shown when YouTube rejects the download (bot check or signature error)."
+  },
+  "errUnsupported": "This link isn't supported.",
+  "errUnavailable": "This video is no longer available.",
+  "errNotFound": "This video couldn't be found. The link may have expired.",
+  "errDrm": "This video is protected and can't be downloaded.",
+  "errAge": "This video is age-restricted and can't be downloaded without a login.",
+  "@errAge": {
+    "description": "Shown for age-gated videos."
+  },
+  "errNetwork": "No internet connection. Check your connection and try again.",
+  "errProcessing": "The video downloaded, but it couldn't be prepared. Try again.",
+  "errNoVideo": "No downloadable video was found at this link.",
+  "errBusy": "Please wait for the current download to finish.",
+  "errStorage": "There isn't enough storage space for this video.",
+  "errEngine": "Couldn't start the downloader. Try again.",
+  "errNoLink": "No link found in what you shared.",
+  "errGeneric": "Couldn't download this video. It may be private, deleted, or the link may be wrong."
+}

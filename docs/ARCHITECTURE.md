@@ -312,9 +312,24 @@ The Gallery copy is independent of the app and survives uninstalling.
 - Video preview is disposed when the result screen is left or the app is
   backgrounded.
 
+## Localization
+
+Messages live in `lib/l10n/app_<locale>.arb`. The English file is the template;
+`flutter gen-l10n` (wired through `l10n.yaml` and `generate: true`) writes the
+`AppLocalizations` classes into `lib/src/l10n/`.
+
+- `AppLanguage.all` in `lib/src/i18n.dart` is the single list of shipped
+  languages, their codes, and their native labels.
+- `AppStrings` (same file) maps the native error and stage codes to strings, so
+  the Kotlin side never sends display text.
+- Right-to-left layout comes from the locale through `GlobalWidgetsLocalizations`;
+  only the video overlay and the optional script fallbacks need manual handling.
+- `test/l10n_test.dart` compares every ARB file with the template: same keys, no
+  empty message, same placeholders, and no accidentally copied English.
+
 ## Error taxonomy
 
-Native errors are mapped to stable codes, then localized by `i18n.dart`.
+Native errors are mapped to stable codes, then localized through the ARB files.
 
 | Code | Meaning |
 | --- | --- |
@@ -341,8 +356,11 @@ That text is target/tool output and is never used as an instruction.
 ## Testing
 
 - `test/app_test.dart` mocks both platform channels and drives the idle,
-  progress, result, settings, Urdu, narrow-screen, and large-text paths.
-- `test/widget_test.dart` checks dictionary completeness and fallback behavior.
+  progress, result, settings, Urdu/Hindi/Arabic, narrow-screen, and large-text
+  paths.
+- `test/widget_test.dart` checks each language resolves, error-code mapping, and
+  the time-left placeholder.
+- `test/l10n_test.dart` keeps every ARB file in step with the English template.
 - `test/visual_test.dart` renders golden screenshots with real fonts and Lucide
   glyphs loaded.
 - `flutter analyze` is kept clean; CI runs analyze plus the behavior tests.

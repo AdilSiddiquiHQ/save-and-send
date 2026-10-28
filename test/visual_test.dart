@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +30,25 @@ void main() {
     final urdu = FontLoader('NotoSansArabic');
     for (final w in [400, 500, 600, 700, 800]) {
       urdu.addFont(rootBundle.load('assets/fonts/NotoSansArabic-$w.ttf'));
+    }
+    // The app leaves non-Arabic scripts to the platform font. The test engine
+    // has no platform fonts, so borrow the system ones and register them under
+    // the fallback families the theme already asks for.
+    for (final (family, path) in const [
+      (
+        'NotoSansDevanagari',
+        '/System/Library/Fonts/Supplemental/Devanagari Sangam MN.ttc',
+      ),
+      (
+        'NotoSansBengali',
+        '/System/Library/Fonts/Supplemental/Bangla Sangam MN.ttc',
+      ),
+    ]) {
+      final file = File(path);
+      if (!file.existsSync()) continue;
+      final loader = FontLoader(family)
+        ..addFont(Future.value(ByteData.sublistView(file.readAsBytesSync())));
+      await loader.load();
     }
     await urdu.load();
 
@@ -142,6 +163,16 @@ void main() {
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/urdu.png'),
+    );
+  });
+
+  testWidgets('arabic visual', (tester) async {
+    _phone(tester);
+    await tester.pumpWidget(const SaveAndSendApp(initialLanguage: 'ar'));
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/arabic.png'),
     );
   });
 }

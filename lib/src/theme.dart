@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'i18n.dart';
+
 // ---------------------------------------------------------------------------
 // Palette: Quiet, premium, high-contrast consumer palette
 // Inspired by top-tier modern craft apps (Linear, Raycast, Things, Wise)
@@ -41,7 +43,17 @@ const kDangerTint = Color(0xFFFDECEB); // Soft danger wash
 const kFontBody = 'Manrope';
 const kFontDisplay = 'PlusJakartaSans';
 const kFontUrdu = 'NotoSansArabic';
-const kFontFallback = <String>[kFontUrdu];
+
+/// Families the engine may use when a glyph is missing from the main font.
+///
+/// Only [kFontUrdu] is bundled. The other two are registered by the visual
+/// tests so the golden screenshots can show Devanagari and Bengali; on a real
+/// device they are absent and Android's own font fallback takes over.
+const kFontFallback = <String>[
+  kFontUrdu,
+  'NotoSansDevanagari',
+  'NotoSansBengali',
+];
 
 TextStyle _body(
   double size, {
@@ -80,7 +92,10 @@ TextStyle _display(
 }
 
 ThemeData buildTheme({String language = 'en'}) {
-  final isUrdu = language == 'ur';
+  // Urdu and Arabic both use the bundled Arabic-script face. Languages with
+  // other scripts fall through to the platform font, so no extra font is
+  // shipped per script.
+  final isArabicScript = AppLanguage.usesArabicScript(language);
 
   TextStyle display(
     double size, {
@@ -89,7 +104,7 @@ ThemeData buildTheme({String language = 'en'}) {
     double spacing = -0.6,
     Color color = kInk,
   }) {
-    if (isUrdu) {
+    if (isArabicScript) {
       return TextStyle(
         fontFamily: kFontUrdu,
         fontSize: size * 0.92,
@@ -131,6 +146,24 @@ ThemeData buildTheme({String language = 'en'}) {
     onErrorContainer: Color(0xFF6B1812),
   );
 
+  TextStyle body(
+    double size, {
+    FontWeight weight = FontWeight.w400,
+    double height = 1.5,
+    double spacing = 0,
+    Color color = kInk,
+  }) {
+    // Letter spacing pulls Arabic-script letters apart, so it stays at zero
+    // for those locales.
+    return _body(
+      size,
+      weight: weight,
+      height: height,
+      spacing: isArabicScript ? 0 : spacing,
+      color: color,
+    );
+  }
+
   final textTheme = TextTheme(
     displayLarge: display(40, weight: FontWeight.w800, height: 1.08, spacing: -1.4),
     displayMedium: display(32, weight: FontWeight.w800, height: 1.12, spacing: -1.0),
@@ -139,14 +172,14 @@ ThemeData buildTheme({String language = 'en'}) {
     headlineMedium: display(21, weight: FontWeight.w700, height: 1.22, spacing: -0.35),
     headlineSmall: display(19, weight: FontWeight.w700, height: 1.25, spacing: -0.2),
     titleLarge: display(17, weight: FontWeight.w700, height: 1.3, spacing: -0.1),
-    titleMedium: _body(15.5, weight: FontWeight.w700, height: 1.4, spacing: -0.05),
-    titleSmall: _body(14, weight: FontWeight.w600, height: 1.35),
-    bodyLarge: _body(15.5, height: 1.55, spacing: 0),
-    bodyMedium: _body(14, height: 1.52),
-    bodySmall: _body(12.5, height: 1.45, color: kMuted),
-    labelLarge: _body(15, weight: FontWeight.w700, height: 1.2, spacing: 0.1),
-    labelMedium: _body(13, weight: FontWeight.w700, height: 1.2, spacing: 0.2),
-    labelSmall: _body(11, weight: FontWeight.w700, height: 1.2, spacing: 0.9, color: kMuted),
+    titleMedium: body(15.5, weight: FontWeight.w700, height: 1.4, spacing: -0.05),
+    titleSmall: body(14, weight: FontWeight.w600, height: 1.35),
+    bodyLarge: body(15.5, height: 1.55, spacing: 0),
+    bodyMedium: body(14, height: 1.52),
+    bodySmall: body(12.5, height: 1.45, color: kMuted),
+    labelLarge: body(15, weight: FontWeight.w700, height: 1.2, spacing: 0.1),
+    labelMedium: body(13, weight: FontWeight.w700, height: 1.2, spacing: 0.2),
+    labelSmall: body(11, weight: FontWeight.w700, height: 1.2, spacing: 0.9, color: kMuted),
   );
 
   final base = ThemeData(

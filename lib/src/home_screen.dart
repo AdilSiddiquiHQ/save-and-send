@@ -23,7 +23,7 @@ class HomeScreen extends StatefulWidget {
     required this.onLanguageChanged,
   });
 
-  final Strings strings;
+  final AppLocalizations strings;
   final String language;
   final ValueChanged<String> onLanguageChanged;
 
@@ -66,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _videoPaused = false;
   bool _muted = false;
 
-  Strings get s => widget.strings;
+  AppLocalizations get s => widget.strings;
   bool get _busy => _phase == Phase.preparing || _phase == Phase.downloading;
 
   @override
@@ -215,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
       if (_busy) {
         _pendingUrl = url;
-        _snack(s.t('busy'));
+        _snack(s.busy);
       } else {
         _startDownload(url);
       }
@@ -385,12 +385,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text(s.t('cancelTitle')),
-          content: Text(s.t('cancelBody')),
+          title: Text(s.cancelTitle),
+          content: Text(s.cancelBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(s.t('keepDownloading')),
+              child: Text(s.keepDownloading),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -398,7 +398,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 backgroundColor: kRed,
                 minimumSize: const Size(100, 48),
               ),
-              child: Text(s.t('stop')),
+              child: Text(s.stop),
             ),
           ],
         );
@@ -419,12 +419,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text(s.t('cancelTitle')),
-          content: Text(s.t('cancelBody')),
+          title: Text(s.cancelTitle),
+          content: Text(s.cancelBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(s.t('keepDownloading')),
+              child: Text(s.keepDownloading),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -432,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 backgroundColor: kRed,
                 minimumSize: const Size(100, 48),
               ),
-              child: Text(s.t('stop')),
+              child: Text(s.stop),
             ),
           ],
         );
@@ -548,13 +548,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final data = await Clipboard.getData(Clipboard.kTextPlain);
       final url = _extractUrl(data?.text ?? '');
       if (url == null) {
-        _snack(s.t('err_no_link'));
+        _snack(s.errNoLink);
         return;
       }
       _urlController.text = url;
       setState(() => _inputError = false);
     } catch (_) {
-      _snack(s.t('err_no_link'));
+      _snack(s.errNoLink);
     }
   }
 
@@ -576,12 +576,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final response = await NativeBridge.shareWhatsApp(result.path);
       if (!mounted) return;
       if (response == 'not_installed') {
-        _snack(s.t('whatsappMissing'));
+        _snack(s.whatsappMissing);
       } else if (response != 'ok') {
-        _snack(s.t('shareFailed'));
+        _snack(s.shareFailed);
       }
     } catch (_) {
-      if (mounted) _snack(s.t('shareFailed'));
+      if (mounted) _snack(s.shareFailed);
     }
   }
 
@@ -592,14 +592,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final response = await NativeBridge.shareStatus(result.path);
       if (!mounted) return;
       if (response == 'chat') {
-        _snack(s.t('statusFallback'));
+        _snack(s.statusFallback);
       } else if (response == 'not_installed') {
-        _snack(s.t('whatsappMissing'));
+        _snack(s.whatsappMissing);
       } else if (response != 'ok') {
-        _snack(s.t('shareFailed'));
+        _snack(s.shareFailed);
       }
     } catch (_) {
-      if (mounted) _snack(s.t('shareFailed'));
+      if (mounted) _snack(s.shareFailed);
     }
   }
 
@@ -609,9 +609,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final response = await NativeBridge.shareSystem(result.path);
       if (!mounted) return;
-      if (response != 'ok') _snack(s.t('shareFailed'));
+      if (response != 'ok') _snack(s.shareFailed);
     } catch (_) {
-      if (mounted) _snack(s.t('shareFailed'));
+      if (mounted) _snack(s.shareFailed);
     }
   }
 
@@ -622,9 +622,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final saved = await NativeBridge.saveToGallery(result.path);
       if (!mounted) return;
       setState(() => _gallerySaved = saved);
-      if (!saved) _snack(s.t('galleryPermission'));
+      if (!saved) _snack(s.galleryPermission);
     } catch (_) {
-      if (mounted) _snack(s.t('galleryPermission'));
+      if (mounted) _snack(s.galleryPermission);
     }
   }
 
@@ -634,9 +634,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final response = await NativeBridge.shareText(url);
       if (!mounted) return;
-      if (response != 'ok') _snack(s.t('shareFailed'));
+      if (response != 'ok') _snack(s.shareFailed);
     } catch (_) {
-      if (mounted) _snack(s.t('shareFailed'));
+      if (mounted) _snack(s.shareFailed);
     }
   }
 
@@ -748,14 +748,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   String _errorText() {
-    final code = _errorCode ?? 'generic';
-    final key = 'err_$code';
-    final localized = s.t(key);
-    if (localized != key) return localized;
+    final localized = s.errorFor(_errorCode);
+    if (localized != null) return localized;
     if (_errorMessage != null && _errorMessage!.trim().isNotEmpty) {
       return _errorMessage!;
     }
-    return s.t('err_generic');
+    return s.errGeneric;
   }
 
   String _etaText(int seconds) {
@@ -763,7 +761,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final m = seconds ~/ 60;
     final sec = seconds % 60;
     final value = m > 0 ? '$m:${sec.toString().padLeft(2, '0')}' : '${sec}s';
-    return s.t('timeLeft').replaceAll('{time}', value);
+    return s.timeLeft(value);
   }
 
   String _durationText(int ms) {
@@ -841,13 +839,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               const BrandMark(size: 82),
               const SizedBox(height: 24),
               Text(
-                s.t('appName'),
+                s.appName,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineLarge,
               ),
               const SizedBox(height: 7),
               Text(
-                s.t('appSubtitle'),
+                s.appSubtitle,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(color: kMuted),
               ),
@@ -862,7 +860,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
               const SizedBox(height: 18),
               Text(
-                s.t(_firstRun ? 'preparingFirst' : 'preparing'),
+                _firstRun ? s.preparingFirst : s.preparing,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: kMuted,
@@ -890,7 +888,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
-                          s.t('firstTime'),
+                          s.firstTime,
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: kMuted,
                             letterSpacing: 0.15,
@@ -917,17 +915,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _AppHeader(strings: s, onSettings: _openSettings),
           const SizedBox(height: 26),
           Text(
-            s.t('heroEyebrow').toUpperCase(),
+            s.heroEyebrow.toUpperCase(),
             style: theme.textTheme.labelSmall?.copyWith(
               color: kGreen,
               letterSpacing: 1.15,
             ),
           ),
           const SizedBox(height: 8),
-          Text(s.t('tagline'), style: theme.textTheme.displaySmall),
+          Text(s.tagline, style: theme.textTheme.displaySmall),
           const SizedBox(height: 10),
           Text(
-            s.t('taglineSub'),
+            s.taglineSub,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: kMuted,
               height: 1.45,
@@ -940,12 +938,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             children: [
               MetaPill(
                 icon: LucideIcons.lock,
-                label: s.t('trustPrivate'),
+                label: s.trustPrivate,
                 background: kSurface.withValues(alpha: 0.85),
               ),
               MetaPill(
                 icon: LucideIcons.shieldCheck,
-                label: s.t('trustNoAccount'),
+                label: s.trustNoAccount,
                 background: kSurface.withValues(alpha: 0.85),
               ),
             ],
@@ -964,7 +962,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 13),
           Text(
-            s.t('worksWith'),
+            s.worksWith,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: kMuted,
@@ -973,17 +971,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 28),
           SectionHeading(
-            title: s.t('howItWorks'),
-            subtitle: s.t('howItWorksHelp'),
+            title: s.howItWorks,
+            subtitle: s.howItWorksHelp,
           ),
           const SizedBox(height: 12),
           _StepsCard(
-            step1Title: s.t('step1Title'),
-            step1Body: s.t('step1Body'),
-            step2Title: s.t('step2Title'),
-            step2Body: s.t('step2Body'),
-            step3Title: s.t('step3Title'),
-            step3Body: s.t('step3Body'),
+            step1Title: s.step1Title,
+            step1Body: s.step1Body,
+            step2Title: s.step2Title,
+            step2Body: s.step2Body,
+            step3Title: s.step3Title,
+            step3Body: s.step3Body,
           ),
         ],
       ),
@@ -1010,7 +1008,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   children: [
                     Expanded(
                       child: Text(
-                        s.t('progressEyebrow').toUpperCase(),
+                        s.progressEyebrow.toUpperCase(),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: kGreen,
                         ),
@@ -1051,7 +1049,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        preparing ? s.t('preparing') : s.t('statusNote'),
+                        preparing ? s.preparing : s.statusNote,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: kMuted,
@@ -1072,7 +1070,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 const SizedBox(height: 18),
                 NoteBanner(
                   icon: LucideIcons.info,
-                  text: s.t('progressHelp'),
+                  text: s.progressHelp,
                 ),
               ],
             ),
@@ -1081,13 +1079,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           DepthButton(
             tone: DepthTone.secondary,
             icon: LucideIcons.x,
-            label: s.t('cancel'),
+            label: s.cancel,
             busy: _cancelling,
             onPressed: _cancelling ? null : _cancelDownload,
           ),
           const SizedBox(height: 4),
           Text(
-            s.t('statusNote'),
+            s.statusNote,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(color: kMuted),
           ),
@@ -1145,7 +1143,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       icon: result.hasAudio
                           ? LucideIcons.volume2
                           : LucideIcons.volumeX,
-                      label: result.hasAudio ? s.t('sound') : s.t('noSound'),
+                      label: result.hasAudio ? s.sound : s.noSound,
                       foreground: result.hasAudio ? kGreen : kAmber,
                       background:
                           result.hasAudio ? kBrandTint : kAmberTint,
@@ -1158,7 +1156,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   const SizedBox(height: 12),
                   NoteBanner(
                     icon: LucideIcons.scissors,
-                    text: s.t('trimmedNote'),
+                    text: s.trimmedNote,
                     foreground: const Color(0xFF7A4E14),
                     background: kAmberTint,
                     borderColor: const Color(0xFFF0DFC3),
@@ -1169,9 +1167,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 const SizedBox(height: 9),
                 _GalleryRow(
                   saved: _gallerySaved,
-                  savedText: s.t('savedGallery'),
-                  missingText: s.t('notSavedGallery'),
-                  saveText: s.t('saveGallery'),
+                  savedText: s.savedGallery,
+                  missingText: s.notSavedGallery,
+                  saveText: s.saveGallery,
                   onSave: _saveAgain,
                 ),
               ],
@@ -1179,28 +1177,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 23),
           SectionHeading(
-            title: s.t('sendSection'),
-            subtitle: s.t('sendHelp'),
+            title: s.sendSection,
+            subtitle: s.sendHelp,
           ),
           const SizedBox(height: 12),
           DepthButton(
             tone: DepthTone.whatsapp,
             icon: LucideIcons.messageCircle,
-            label: s.t('sendWhatsApp'),
+            label: s.sendWhatsApp,
             onPressed: _shareWhatsApp,
           ),
           const SizedBox(height: 10),
           DepthButton(
             tone: DepthTone.secondary,
             icon: LucideIcons.circlePlus,
-            label: s.t('sendStatus'),
+            label: s.sendStatus,
             onPressed: _shareStatus,
           ),
           const SizedBox(height: 10),
           DepthButton(
             tone: DepthTone.quiet,
             icon: LucideIcons.share2,
-            label: s.t('moreApps'),
+            label: s.moreApps,
             onPressed: _shareSystem,
           ),
           const SizedBox(height: 8),
@@ -1210,7 +1208,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               minimumSize: const Size.fromHeight(48),
               foregroundColor: kMuted,
             ),
-            child: Text(s.t('done')),
+            child: Text(s.done),
           ),
         ],
       ),
@@ -1229,7 +1227,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: SoftIconButton(
               icon: LucideIcons.x,
               onPressed: _done,
-              tooltip: s.t('done'),
+              tooltip: s.done,
             ),
           ),
           const SizedBox(height: 12),
@@ -1243,7 +1241,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 18),
           Text(
-            s.t('errorTitle'),
+            s.errorTitle,
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineMedium,
           ),
@@ -1283,7 +1281,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             DepthButton(
               tone: DepthTone.primary,
               icon: LucideIcons.keyRound,
-              label: s.t('loginCookies'),
+              label: s.loginCookies,
               onPressed: _openSettings,
             ),
             const SizedBox(height: 10),
@@ -1291,14 +1289,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (hasLink) ...[
             DepthButton(
               icon: LucideIcons.refreshCw,
-              label: s.t('tryAgain'),
+              label: s.tryAgain,
               onPressed: _retry,
             ),
             const SizedBox(height: 10),
             DepthButton(
               tone: DepthTone.secondary,
               icon: LucideIcons.share2,
-              label: s.t('shareLink'),
+              label: s.shareLink,
               onPressed: _shareLink,
             ),
             const SizedBox(height: 10),
@@ -1306,14 +1304,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           DepthButton(
             tone: DepthTone.quiet,
             icon: LucideIcons.settings,
-            label: s.t('openSettings'),
+            label: s.openSettings,
             onPressed: _openSettings,
           ),
           const SizedBox(height: 2),
           TextButton(
             onPressed: _done,
             style: TextButton.styleFrom(foregroundColor: kMuted),
-            child: Text(s.t('done')),
+            child: Text(s.done),
           ),
           if (_errorDetail != null && _errorDetail!.trim().isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -1328,7 +1326,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   size: 16,
                 ),
                 label: Text(
-                  _showDetails ? s.t('hideDetails') : s.t('details'),
+                  _showDetails ? s.hideDetails : s.details,
                 ),
               ),
             ),
@@ -1339,6 +1337,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 shadow: false,
                 child: SelectableText(
                   _errorDetail!,
+                  // The detail is a native log line, always left to right.
+                  textDirection: TextDirection.ltr,
                   style: const TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 11,
@@ -1364,7 +1364,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: SoftIconButton(
               icon: LucideIcons.x,
               onPressed: _done,
-              tooltip: s.t('done'),
+              tooltip: s.done,
             ),
           ),
           const SizedBox(height: 20),
@@ -1378,13 +1378,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 20),
           Text(
-            s.t('engineErrorTitle'),
+            s.engineErrorTitle,
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineMedium,
           ),
           const SizedBox(height: 10),
           Text(
-            s.t('engineErrorBody'),
+            s.engineErrorBody,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: kMuted,
@@ -1401,6 +1401,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _engineError!,
                 maxLines: 5,
                 overflow: TextOverflow.ellipsis,
+                // Native setup output is always left to right.
+                textDirection: TextDirection.ltr,
                 style: const TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 11,
@@ -1413,14 +1415,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           const SizedBox(height: 24),
           DepthButton(
             icon: LucideIcons.refreshCw,
-            label: s.t('retrySetup'),
+            label: s.retrySetup,
             onPressed: _retrySetup,
           ),
           const SizedBox(height: 2),
           TextButton(
             onPressed: _done,
             style: TextButton.styleFrom(foregroundColor: kMuted),
-            child: Text(s.t('done')),
+            child: Text(s.done),
           ),
         ],
       ),
@@ -1454,7 +1456,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 class _AppHeader extends StatelessWidget {
   const _AppHeader({required this.strings, this.onSettings});
 
-  final Strings strings;
+  final AppLocalizations strings;
   final VoidCallback? onSettings;
 
   @override
@@ -1469,7 +1471,7 @@ class _AppHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                strings.t('appName'),
+                strings.appName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleLarge?.copyWith(
@@ -1481,7 +1483,7 @@ class _AppHeader extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                strings.t('appSubtitle'),
+                strings.appSubtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(color: kMuted),
@@ -1494,7 +1496,7 @@ class _AppHeader extends StatelessWidget {
           SoftIconButton(
             icon: LucideIcons.settings,
             onPressed: onSettings,
-            tooltip: strings.t('settings'),
+            tooltip: strings.settings,
           ),
         ],
       ],
@@ -1505,7 +1507,7 @@ class _AppHeader extends StatelessWidget {
 class _ResultHeader extends StatelessWidget {
   const _ResultHeader({required this.strings, required this.onClose});
 
-  final Strings strings;
+  final AppLocalizations strings;
   final VoidCallback onClose;
 
   @override
@@ -1529,14 +1531,14 @@ class _ResultHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                strings.t('readyTitle'),
+                strings.readyTitle,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleLarge,
               ),
               const SizedBox(height: 2),
               Text(
-                strings.t('readySubtitle'),
+                strings.readySubtitle,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(color: kMuted),
@@ -1548,7 +1550,7 @@ class _ResultHeader extends StatelessWidget {
         SoftIconButton(
           icon: LucideIcons.x,
           onPressed: onClose,
-          tooltip: strings.t('done'),
+          tooltip: strings.done,
         ),
       ],
     );
@@ -1566,7 +1568,7 @@ class _LinkComposer extends StatelessWidget {
     required this.onChanged,
   });
 
-  final Strings strings;
+  final AppLocalizations strings;
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool inputError;
@@ -1603,12 +1605,12 @@ class _LinkComposer extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      strings.t('linkLabel'),
+                      strings.linkLabel,
                       style: theme.textTheme.titleMedium,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      strings.t('linkHelp'),
+                      strings.linkHelp,
                       style: theme.textTheme.bodySmall?.copyWith(color: kMuted),
                     ),
                   ],
@@ -1639,7 +1641,7 @@ class _LinkComposer extends StatelessWidget {
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          strings.t('paste'),
+                          strings.paste,
                           style: const TextStyle(
                             fontFamily: kFontBody,
                             fontFamilyFallback: kFontFallback,
@@ -1666,21 +1668,23 @@ class _LinkComposer extends StatelessWidget {
             onSubmitted: (_) => onSubmit(),
             onChanged: (_) => onChanged(),
             style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14.5),
+            textAlign: TextAlign.left,
+            textDirection: TextDirection.ltr,
             decoration: InputDecoration(
-              hintText: strings.t('pasteHint'),
+              hintText: '\u2066${strings.pasteHint}\u2069',
               prefixIcon: const Icon(LucideIcons.link2, size: 17),
-              errorText: inputError ? strings.t('err_no_link') : null,
+              errorText: inputError ? strings.errNoLink : null,
             ),
           ),
           const SizedBox(height: 12),
           DepthButton(
             icon: LucideIcons.arrowDownToLine,
-            label: strings.t('download'),
+            label: strings.download,
             onPressed: onSubmit,
           ),
           const SizedBox(height: 3),
           Text(
-            strings.t('downloadHint'),
+            strings.downloadHint,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: kMuted,
@@ -1907,7 +1911,7 @@ class _Preview extends StatelessWidget {
   final bool paused;
   final VoidCallback onToggleMute;
   final VoidCallback onTogglePlay;
-  final Strings strings;
+  final AppLocalizations strings;
 
   @override
   Widget build(BuildContext context) {
@@ -1964,7 +1968,7 @@ class _Preview extends StatelessWidget {
                               ? LucideIcons.volumeX
                               : LucideIcons.volume2,
                           tooltip:
-                              muted ? strings.t('unmute') : strings.t('mute'),
+                              muted ? strings.unmute : strings.mute,
                           onPressed: onToggleMute,
                         ),
                       ),
@@ -1972,7 +1976,7 @@ class _Preview extends StatelessWidget {
                         Center(
                           child: _VideoControl(
                             icon: LucideIcons.play,
-                            tooltip: strings.t('play'),
+                            tooltip: strings.play,
                             onPressed: onTogglePlay,
                             size: 52,
                             iconSize: 22,
@@ -1984,7 +1988,7 @@ class _Preview extends StatelessWidget {
                           left: 9,
                           child: _VideoControl(
                             icon: LucideIcons.pause,
-                            tooltip: strings.t('pause'),
+                            tooltip: strings.pause,
                             onPressed: onTogglePlay,
                           ),
                         ),
@@ -2104,7 +2108,7 @@ class _GalleryRow extends StatelessWidget {
         ),
         if (!saved)
           Padding(
-            padding: const EdgeInsets.only(left: 42, top: 2),
+            padding: const EdgeInsetsDirectional.only(start: 42, top: 2),
             child: TextButton.icon(
               onPressed: onSave,
               style: TextButton.styleFrom(
